@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{% url 'student-list' %}">← Назад к списку</a></p>
+<div class="topbar">
+    <div>
+        <h3>{{ student.full_name }}</h3>
+        <div class="muted">{{ student.group }} | Курс {{ student.course }} | Возраст: {{ student.age }}</div>
+    </div>
+    <a class="button" href="{% url 'student-update' student.pk %}">Редактировать</a>
+</div>
+
+<div class="tabs" id="student-tabs">
+    <button type="button" class="tab tab-button active" data-tab="personal">Личные данные</button>
+    <button type="button" class="tab tab-button" data-tab="family">Семья</button>
+    <button type="button" class="tab tab-button" data-tab="housing">Жилье</button>
+    <button type="button" class="tab tab-button" data-tab="psycho">Характеристика</button>
+    <button type="button" class="tab tab-button" data-tab="academic">Учеба</button>
+    {% if perms.core.view_studentmedical %}
+    <button type="button" class="tab tab-button" data-tab="medical">Медицина</button>
+    {% endif %}
+    <button type="button" class="tab tab-button" data-tab="benefits">Льготы</button>
+    <button type="button" class="tab tab-button" data-tab="ai">ИИ-анализ</button>
+</div>
+
+<div class="card tab-panel active" id="tab-personal">
+<h4>Личные и учебные данные</h4>
+<p>ИИН: {{ student.iin }} | Телефон: {{ student.phone }} | Кафедра: {{ student.department }}</p>
+</div>
+
+<div class="card tab-panel" id="tab-family">
+<h4>Семья</h4>
+<p>Тип семьи: {{ family.family_type|default:"-" }} | Материальное положение: {{ family.income_level|default:"-" }}</p>
+<p><a href="{% url 'family-edit' student.pk %}">Редактировать семью</a> | <a href="{% url 'family-member-create' student.pk %}">Добавить члена семьи</a></p>
+<ul>
+    {% for member in members %}
+        <li>{{ member.full_name }} ({{ member.relation }}) <a href="{% url 'family-member-delete' student.pk member.pk %}">Удалить</a></li>
+    {% empty %}
+        <li>Члены семьи не добавлены.</li>
+    {% endfor %}
+</ul>
+</div>
+
+<div class="card tab-panel" id="tab-housing">
+<h4>Жилищные условия</h4>
+<p>{{ housing.housing_type|default:"Нет данных" }} - {{ housing.comment|default:"" }}</p>
+<p><a href="{% url 'housing-edit' student.pk %}">Редактировать</a></p>
+</div>
+
+<div class="card tab-panel" id="tab-psycho">
+<h4>Социально-психологическая характеристика</h4>
+<p>Адаптация: {{ psycho.adaptation_level|default:"-" }} | Поведение: {{ psycho.behavior_in_group|default:"-" }}</p>
+<p><a href="{% url 'psycho-edit' student.pk %}">Редактировать</a></p>
+</div>
+
+<div class="card tab-panel" id="tab-academic">
+<h4>Учебная деятельность</h4>
+<p>GPA: {{ academic.gpa|default:"-" }} | Посещаемость: {{ academic.get_attendance_display|default:"-" }}</p>
+<p><a href="{% url 'academic-edit' student.pk %}">Редактировать</a></p>
+</div>
+
+{% if perms.core.view_studentmedical %}
+<div class="card tab-panel" id="tab-medical">
+<h4>Медицинские сведения</h4>
+<p>Группа здоровья: {{ medical.health_group|default:"-" }} | Инвалидность: {{ medical.has_disability|yesno:"да,нет" }}</p>
+<p><a href="{% url 'medical-edit' student.pk %}">Редактировать</a></p>
+</div>
+{% endif %}
+
+<div class="card tab-panel" id="tab-benefits">
+<h4>Льготы и поддержка</h4>
+<p>Госгрант: {{ benefits.state_grant|yesno:"да,нет" }} | Стипендия: {{ benefits.receives_scholarship|yesno:"да,нет" }}</p>
+<p><a href="{% url 'benefits-edit' student.pk %}">Редактировать</a></p>
+</div>
+
+<div class="card tab-panel" id="tab-ai">
+<h4>ИИ-анализ</h4>
+<p><a class="button" href="{% url 'ai-generate' student.pk %}">{% if latest_ai %}Повторно проанализировать{% else %}Сформировать ИИ-анализ{% endif %}</a></p>
+{% if latest_ai %}
+    <p><strong>Профиль:</strong> {{ latest_ai.short_profile }}</p>
+    <p><strong>Сильные стороны:</strong> {{ latest_ai.strengths|linebreaksbr }}</p>
+    <p><strong>Факторы риска:</strong> {{ latest_ai.risk_factors|linebreaksbr }}</p>
+    <p><strong>Рекомендации:</strong> {{ latest_ai.recommendations|linebreaksbr }}</p>
+    <p>
+        <strong>Уровень риска:</strong>
+        <span class="badge {% if latest_ai.risk_level == 'high' %}badge-red{% elif latest_ai.risk_level == 'medium' %}badge-orange{% else %}badge-blue{% endif %}">
+            {{ latest_ai.get_risk_level_display }}
+        </span>
+        |
+        <strong>Уровень сопровождения:</strong>
+        <span class="badge badge-gray">{{ latest_ai.get_support_level_display }}</span>
+    </p>
+    <p><strong>Дата анализа:</strong> {{ latest_ai.created_at }}</p>
+    <p><em>{{ latest_ai.disclaimer }}</em></p>
+{% endif %}
+</div>
+
+<script>
+    (function () {
+        const tabsRoot = document.getElementById("student-tabs");
+        if (!tabsRoot) return;
+
+        const buttons = tabsRoot.querySelectorAll(".tab-button");
+        const panels = document.querySelectorAll(".tab-panel");
+
+        function activateTab(tabName) {
+            buttons.forEach((btn) => {
+                btn.classList.toggle("active", btn.dataset.tab === tabName);
+            });
+            panels.forEach((panel) => {
+                panel.classList.toggle("active", panel.id === `tab-${tabName}`);
+            });
+        }
+
+        buttons.forEach((btn) => {
+            btn.addEventListener("click", function () {
+                activateTab(this.dataset.tab);
+            });
+        });
+    })();
+</script>
+{% endblock %}

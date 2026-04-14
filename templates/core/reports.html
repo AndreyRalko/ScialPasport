@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Отчеты и выборки</h3>
+<div class="muted">Формирование экспортов в CSV/XLSX для администрации и кураторов</div>
+<div class="card">
+<table>
+    <thead><tr><th>Отчет</th><th>CSV</th><th>XLSX</th></tr></thead>
+    <tbody>
+        <tr><td>Студенты из малообеспеченных семей</td><td><a href="{% url 'report-export' 'low_income' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'low_income' 'xlsx' %}">XLSX</a></td></tr>
+        <tr><td>Студенты с инвалидностью</td><td><a href="{% url 'report-export' 'disability' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'disability' 'xlsx' %}">XLSX</a></td></tr>
+        <tr><td>Студенты, проживающие в общежитии</td><td><a href="{% url 'report-export' 'dormitory' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'dormitory' 'xlsx' %}">XLSX</a></td></tr>
+        <tr><td>Студенты с проблемной посещаемостью</td><td><a href="{% url 'report-export' 'problem_attendance' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'problem_attendance' 'xlsx' %}">XLSX</a></td></tr>
+        <tr><td>Студенты с низкой адаптацией</td><td><a href="{% url 'report-export' 'low_adaptation' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'low_adaptation' 'xlsx' %}">XLSX</a></td></tr>
+        <tr><td>Студенты с высоким риском (ИИ)</td><td><a href="{% url 'report-export' 'high_risk_ai' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'high_risk_ai' 'xlsx' %}">XLSX</a></td></tr>
+    </tbody>
+</table>
+</div>
+{% endblock %}

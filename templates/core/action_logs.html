@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Журнал действий</h3>
+<div class="muted">Все действия пользователей в системе</div>
+<div class="card">
+<table>
+    <thead><tr><th>Дата</th><th>Пользователь</th><th>Действие</th><th>Описание</th></tr></thead>
+    <tbody>
+    {% for log in logs %}
+        <tr>
+            <td>{{ log.created_at }}</td>
+            <td>{{ log.user|default:"Система" }}</td>
+            <td>{{ log.get_action_display }}</td>
+            <td>{{ log.description }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
