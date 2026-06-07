@@ -1,121 +1,248 @@
 {% extends "base.html" %}
 {% block content %}
-<p><a href="{% url 'student-list' %}">← Назад к списку</a></p>
-<div class="topbar">
-    <div>
-        <h3>{{ student.full_name }}</h3>
-        <div class="muted">{{ student.group }} | Курс {{ student.course }} | Возраст: {{ student.age }}</div>
+<a class="back-link" href="{% url 'student-list' %}">← Назад к списку</a>
+
+<div class="profile-hero card">
+    <div class="profile-hero-main">
+        <div class="profile-avatar" aria-hidden="true">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        <div class="profile-hero-info">
+            <h3>{{ student.full_name }}</h3>
+            <div class="profile-meta">
+                <span>{{ student.group }}</span>
+                <span class="profile-meta-dot">·</span>
+                <span>Курс {{ student.course }}</span>
+                <span class="profile-meta-dot">·</span>
+                <span>{{ student.age }} лет</span>
+            </div>
+            <div class="profile-badges">
+                <span class="badge badge-blue">{{ student.payment_form }}</span>
+                <span class="badge badge-gray">{{ student.specialty }}</span>
+                {% if academic and academic.attendance == "problematic" %}
+                    <span class="badge badge-red">Проблемная посещаемость</span>
+                {% endif %}
+                {% if latest_ai and latest_ai.risk_level == "high" %}
+                    <span class="badge badge-red">Высокий риск</span>
+                {% elif latest_ai and latest_ai.risk_level == "medium" %}
+                    <span class="badge badge-orange">Средний риск</span>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    <a class="button" href="{% url 'student-update' student.pk %}">Редактировать</a>
+    <a class="button" href="{% url 'student-update' student.pk %}">Редактировать профиль</a>
 </div>
 
-<div class="tabs" id="student-tabs">
-    <button type="button" class="tab tab-button active" data-tab="personal">Личные данные</button>
-    <button type="button" class="tab tab-button" data-tab="family">Семья</button>
-    <button type="button" class="tab tab-button" data-tab="housing">Жилье</button>
-    <button type="button" class="tab tab-button" data-tab="psycho">Характеристика</button>
-    <button type="button" class="tab tab-button" data-tab="academic">Учеба</button>
+<div class="profile-tabs" id="student-tabs">
+    <button type="button" class="profile-tab tab-button active" data-tab="personal">Личные данные</button>
+    <button type="button" class="profile-tab tab-button" data-tab="family">Семья</button>
+    <button type="button" class="profile-tab tab-button" data-tab="housing">Жильё</button>
+    <button type="button" class="profile-tab tab-button" data-tab="psycho">Характеристика</button>
+    <button type="button" class="profile-tab tab-button" data-tab="academic">Учёба</button>
     {% if perms.core.view_studentmedical %}
-    <button type="button" class="tab tab-button" data-tab="medical">Медицина</button>
+    <button type="button" class="profile-tab tab-button" data-tab="medical">Медицина</button>
     {% endif %}
-    <button type="button" class="tab tab-button" data-tab="benefits">Льготы</button>
-    <button type="button" class="tab tab-button" data-tab="ai">ИИ-анализ</button>
+    <button type="button" class="profile-tab tab-button" data-tab="benefits">Льготы</button>
+    <button type="button" class="profile-tab tab-button" data-tab="ai">ИИ-анализ</button>
 </div>
 
-<div class="card tab-panel active" id="tab-personal">
-<h4>Личные и учебные данные</h4>
-<p>ИИН: {{ student.iin }} | Телефон: {{ student.phone }} | Кафедра: {{ student.department }}</p>
+<div class="tab-panel active" id="tab-personal">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>Личные и учебные данные</h4>
+            <a class="section-edit" href="{% url 'student-update' student.pk %}">Изменить</a>
+        </div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">ИИН</span><span class="info-value">{{ student.iin }}</span></div>
+            <div class="info-item"><span class="info-label">Телефон</span><span class="info-value">{{ student.phone }}</span></div>
+            <div class="info-item"><span class="info-label">Дата рождения</span><span class="info-value">{{ student.birth_date|date:"d.m.Y" }}</span></div>
+            <div class="info-item"><span class="info-label">Гражданство</span><span class="info-value">{{ student.citizenship }}</span></div>
+            <div class="info-item"><span class="info-label">Национальность</span><span class="info-value">{{ student.nationality }}</span></div>
+            <div class="info-item"><span class="info-label">Кафедра</span><span class="info-value">{{ student.department }}</span></div>
+            <div class="info-item"><span class="info-label">Специальность</span><span class="info-value">{{ student.specialty }}</span></div>
+            <div class="info-item"><span class="info-label">Учебная группа</span><span class="info-value">{{ student.group }}</span></div>
+        </div>
+    </div>
 </div>
 
-<div class="card tab-panel" id="tab-family">
-<h4>Семья</h4>
-<p>Тип семьи: {{ family.family_type|default:"-" }} | Материальное положение: {{ family.income_level|default:"-" }}</p>
-<p><a href="{% url 'family-edit' student.pk %}">Редактировать семью</a> | <a href="{% url 'family-member-create' student.pk %}">Добавить члена семьи</a></p>
-<ul>
-    {% for member in members %}
-        <li>{{ member.full_name }} ({{ member.relation }}) <a href="{% url 'family-member-delete' student.pk member.pk %}">Удалить</a></li>
-    {% empty %}
-        <li>Члены семьи не добавлены.</li>
-    {% endfor %}
-</ul>
+<div class="tab-panel" id="tab-family">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>Семья</h4>
+            <div class="section-actions">
+                <a class="section-edit" href="{% url 'family-edit' student.pk %}">Изменить</a>
+                <a class="button button-sm" href="{% url 'family-member-create' student.pk %}">+ Добавить</a>
+            </div>
+        </div>
+        <div class="info-grid info-grid-2">
+            <div class="info-item"><span class="info-label">Тип семьи</span><span class="info-value">{{ family.family_type|default:"—" }}</span></div>
+            <div class="info-item"><span class="info-label">Материальное положение</span><span class="info-value">{{ family.income_level|default:"—" }}</span></div>
+        </div>
+        {% if members %}
+        <div class="member-list">
+            {% for member in members %}
+            <div class="member-card">
+                <div class="member-card-main">
+                    <div class="member-name">{{ member.full_name }}</div>
+                    <div class="member-meta">{{ member.relation }}{% if member.birth_year %} · {{ member.birth_year }} г.р.{% endif %}</div>
+                    {% if member.workplace %}<div class="member-detail">{{ member.workplace }}{% if member.position %}, {{ member.position }}{% endif %}</div>{% endif %}
+                    {% if member.phone %}<div class="member-detail">{{ member.phone }}</div>{% endif %}
+                </div>
+                <div class="member-tags">
+                    {% if member.is_guardian %}<span class="tag">Опекун</span>{% endif %}
+                    {% if member.is_primary_contact %}<span class="tag tag-blue">Контакт</span>{% endif %}
+                    <a class="member-delete" href="{% url 'family-member-delete' student.pk member.pk %}">Удалить</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">Члены семьи не добавлены</div>
+        {% endif %}
+    </div>
 </div>
 
-<div class="card tab-panel" id="tab-housing">
-<h4>Жилищные условия</h4>
-<p>{{ housing.housing_type|default:"Нет данных" }} - {{ housing.comment|default:"" }}</p>
-<p><a href="{% url 'housing-edit' student.pk %}">Редактировать</a></p>
+<div class="tab-panel" id="tab-housing">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>Жилищные условия</h4>
+            <a class="section-edit" href="{% url 'housing-edit' student.pk %}">Изменить</a>
+        </div>
+        <div class="info-grid info-grid-2">
+            <div class="info-item"><span class="info-label">Тип жилья</span><span class="info-value">{% if housing %}{{ housing.housing_type|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item info-item-wide"><span class="info-label">Комментарий</span><span class="info-value">{% if housing %}{{ housing.comment|default:"—" }}{% else %}—{% endif %}</span></div>
+        </div>
+    </div>
 </div>
 
-<div class="card tab-panel" id="tab-psycho">
-<h4>Социально-психологическая характеристика</h4>
-<p>Адаптация: {{ psycho.adaptation_level|default:"-" }} | Поведение: {{ psycho.behavior_in_group|default:"-" }}</p>
-<p><a href="{% url 'psycho-edit' student.pk %}">Редактировать</a></p>
+<div class="tab-panel" id="tab-psycho">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>Социально-психологическая характеристика</h4>
+            <a class="section-edit" href="{% url 'psycho-edit' student.pk %}">Изменить</a>
+        </div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">Темперамент</span><span class="info-value">{% if psycho %}{{ psycho.temperament|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Уровень общения</span><span class="info-value">{% if psycho %}{{ psycho.communication|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Поведение в группе</span><span class="info-value">{% if psycho %}{{ psycho.behavior_in_group|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Ответственность</span><span class="info-value">{% if psycho %}{{ psycho.responsibility_level|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Адаптация</span><span class="info-value">{% if psycho %}{{ psycho.adaptation_level|default:"—" }}{% else %}—{% endif %}</span></div>
+            {% if psycho and psycho.description %}
+            <div class="info-item info-item-wide"><span class="info-label">Описание</span><span class="info-value">{{ psycho.description }}</span></div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-<div class="card tab-panel" id="tab-academic">
-<h4>Учебная деятельность</h4>
-<p>GPA: {{ academic.gpa|default:"-" }} | Посещаемость: {{ academic.get_attendance_display|default:"-" }}</p>
-<p><a href="{% url 'academic-edit' student.pk %}">Редактировать</a></p>
+<div class="tab-panel" id="tab-academic">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>Учебная деятельность</h4>
+            <a class="section-edit" href="{% url 'academic-edit' student.pk %}">Изменить</a>
+        </div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">Средний балл</span><span class="info-value info-value-lg">{% if academic %}{{ academic.gpa|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Посещаемость</span><span class="info-value">{% if academic and academic.attendance == "problematic" %}<span class="badge badge-red">{{ academic.get_attendance_display }}</span>{% elif academic and academic.attendance %}{{ academic.get_attendance_display }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Пропуски без причины</span><span class="info-value">{% if academic and academic.has_unexcused_absences %}Да ({{ academic.unexcused_absences_count }}){% else %}Нет{% endif %}</span></div>
+            {% if academic and academic.activity %}
+            <div class="info-item info-item-wide"><span class="info-label">Внеучебная активность</span><span class="info-value">{{ academic.activity }}</span></div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
 {% if perms.core.view_studentmedical %}
-<div class="card tab-panel" id="tab-medical">
-<h4>Медицинские сведения</h4>
-<p>Группа здоровья: {{ medical.health_group|default:"-" }} | Инвалидность: {{ medical.has_disability|yesno:"да,нет" }}</p>
-<p><a href="{% url 'medical-edit' student.pk %}">Редактировать</a></p>
+<div class="tab-panel" id="tab-medical">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>Медицинские сведения</h4>
+            <a class="section-edit" href="{% url 'medical-edit' student.pk %}">Изменить</a>
+        </div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">Группа здоровья</span><span class="info-value">{% if medical %}{{ medical.health_group|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">Инвалидность</span><span class="info-value">{% if medical %}{{ medical.has_disability|yesno:"Да,Нет" }}{% else %}—{% endif %}</span></div>
+            {% if medical and medical.disability_details %}
+            <div class="info-item info-item-wide"><span class="info-label">Сведения об инвалидности</span><span class="info-value">{{ medical.disability_details }}</span></div>
+            {% endif %}
+            {% if medical and medical.chronic_diseases %}
+            <div class="info-item info-item-wide"><span class="info-label">Хронические заболевания</span><span class="info-value">{{ medical.chronic_diseases }}</span></div>
+            {% endif %}
+            {% if medical and medical.recommendations %}
+            <div class="info-item info-item-wide"><span class="info-label">Рекомендации</span><span class="info-value">{{ medical.recommendations }}</span></div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% endif %}
 
-<div class="card tab-panel" id="tab-benefits">
-<h4>Льготы и поддержка</h4>
-<p>Госгрант: {{ benefits.state_grant|yesno:"да,нет" }} | Стипендия: {{ benefits.receives_scholarship|yesno:"да,нет" }}</p>
-<p><a href="{% url 'benefits-edit' student.pk %}">Редактировать</a></p>
+<div class="tab-panel" id="tab-benefits">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>Льготы и поддержка</h4>
+            <a class="section-edit" href="{% url 'benefits-edit' student.pk %}">Изменить</a>
+        </div>
+        <div class="benefits-grid">
+            <div class="benefit-chip {% if benefits and benefits.state_grant %}active{% endif %}">Госгрант</div>
+            <div class="benefit-chip {% if benefits and benefits.receives_scholarship %}active{% endif %}">Стипендия</div>
+            <div class="benefit-chip {% if benefits and benefits.disability_allowance %}active{% endif %}">Пособие по инвалидности</div>
+            <div class="benefit-chip {% if benefits and benefits.breadwinner_loss_allowance %}active{% endif %}">Потеря кормильца</div>
+            <div class="benefit-chip {% if benefits and benefits.preferential_housing %}active{% endif %}">Льготное жильё</div>
+            <div class="benefit-chip {% if benefits and benefits.free_meals %}active{% endif %}">Бесплатное питание</div>
+        </div>
+        {% if benefits and benefits.additional_benefits %}
+        <div class="info-item info-item-wide" style="margin-top:14px"><span class="info-label">Дополнительно</span><span class="info-value">{{ benefits.additional_benefits }}</span></div>
+        {% endif %}
+    </div>
 </div>
 
-<div class="card tab-panel" id="tab-ai">
-<h4>ИИ-анализ</h4>
-<p><a class="button" href="{% url 'ai-generate' student.pk %}">{% if latest_ai %}Повторно проанализировать{% else %}Сформировать ИИ-анализ{% endif %}</a></p>
-{% if latest_ai %}
-    <p><strong>Профиль:</strong> {{ latest_ai.short_profile }}</p>
-    <p><strong>Сильные стороны:</strong> {{ latest_ai.strengths|linebreaksbr }}</p>
-    <p><strong>Факторы риска:</strong> {{ latest_ai.risk_factors|linebreaksbr }}</p>
-    <p><strong>Рекомендации:</strong> {{ latest_ai.recommendations|linebreaksbr }}</p>
-    <p>
-        <strong>Уровень риска:</strong>
-        <span class="badge {% if latest_ai.risk_level == 'high' %}badge-red{% elif latest_ai.risk_level == 'medium' %}badge-orange{% else %}badge-blue{% endif %}">
-            {{ latest_ai.get_risk_level_display }}
-        </span>
-        |
-        <strong>Уровень сопровождения:</strong>
-        <span class="badge badge-gray">{{ latest_ai.get_support_level_display }}</span>
-    </p>
-    <p><strong>Дата анализа:</strong> {{ latest_ai.created_at }}</p>
-    <p><em>{{ latest_ai.disclaimer }}</em></p>
-{% endif %}
+<div class="tab-panel" id="tab-ai">
+    <div class="section-card card">
+        <div class="section-header">
+            <h4>ИИ-анализ</h4>
+            <a class="button button-sm" href="{% url 'ai-generate' student.pk %}">{% if latest_ai %}Повторить анализ{% else %}Сформировать{% endif %}</a>
+        </div>
+        {% if latest_ai %}
+        <div class="ai-stats">
+            <div class="ai-stat">
+                <span class="ai-stat-label">Уровень риска</span>
+                <span class="badge {% if latest_ai.risk_level == 'high' %}badge-red{% elif latest_ai.risk_level == 'medium' %}badge-orange{% else %}badge-blue{% endif %}">{{ latest_ai.get_risk_level_display }}</span>
+            </div>
+            <div class="ai-stat">
+                <span class="ai-stat-label">Сопровождение</span>
+                <span class="badge badge-gray">{{ latest_ai.get_support_level_display }}</span>
+            </div>
+            <div class="ai-stat">
+                <span class="ai-stat-label">Дата</span>
+                <span class="info-value">{{ latest_ai.created_at|date:"d.m.Y H:i" }}</span>
+            </div>
+        </div>
+        <div class="ai-blocks">
+            <div class="ai-block"><div class="ai-block-title">Профиль</div><p>{{ latest_ai.short_profile }}</p></div>
+            <div class="ai-block ai-block-green"><div class="ai-block-title">Сильные стороны</div><p>{{ latest_ai.strengths|linebreaksbr }}</p></div>
+            <div class="ai-block ai-block-red"><div class="ai-block-title">Факторы риска</div><p>{{ latest_ai.risk_factors|linebreaksbr }}</p></div>
+            <div class="ai-block ai-block-blue"><div class="ai-block-title">Рекомендации</div><p>{{ latest_ai.recommendations|linebreaksbr }}</p></div>
+        </div>
+        <p class="ai-disclaimer">{{ latest_ai.disclaimer }}</p>
+        {% else %}
+        <div class="empty-state">
+            <p>ИИ-анализ ещё не сформирован</p>
+            <a class="button" href="{% url 'ai-generate' student.pk %}">Сформировать анализ</a>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 <script>
-    (function () {
-        const tabsRoot = document.getElementById("student-tabs");
-        if (!tabsRoot) return;
-
-        const buttons = tabsRoot.querySelectorAll(".tab-button");
-        const panels = document.querySelectorAll(".tab-panel");
-
-        function activateTab(tabName) {
-            buttons.forEach((btn) => {
-                btn.classList.toggle("active", btn.dataset.tab === tabName);
-            });
-            panels.forEach((panel) => {
-                panel.classList.toggle("active", panel.id === `tab-${tabName}`);
-            });
-        }
-
-        buttons.forEach((btn) => {
-            btn.addEventListener("click", function () {
-                activateTab(this.dataset.tab);
-            });
-        });
-    })();
+(function () {
+    const tabsRoot = document.getElementById("student-tabs");
+    if (!tabsRoot) return;
+    const buttons = tabsRoot.querySelectorAll(".tab-button");
+    const panels = document.querySelectorAll(".tab-panel");
+    function activateTab(tabName) {
+        buttons.forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabName));
+        panels.forEach((panel) => panel.classList.toggle("active", panel.id === `tab-${tabName}`));
+    }
+    buttons.forEach((btn) => btn.addEventListener("click", () => activateTab(btn.dataset.tab)));
+    const hash = location.hash.replace("#", "");
+    if (hash && document.getElementById(`tab-${hash}`)) activateTab(hash);
+})();
 </script>
 {% endblock %}

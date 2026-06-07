@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{% url 'settings' %}?tab=users">← Назад к пользователям</a></p>
+<div class="topbar">
+    <h3>{{ title }}</h3>
+</div>
+
+<div class="card settings-user-form">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h4>Учётная запись</h4>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="id_username">Логин</label>
+                    {{ form.username }}
+                    {{ form.username.errors }}
+                </div>
+                <div class="form-field">
+                    <label for="id_password">Пароль</label>
+                    {{ form.password }}
+                    {% if form.password.help_text %}<span class="field-hint">{{ form.password.help_text }}</span>{% endif %}
+                    {{ form.password.errors }}
+                </div>
+                <div class="form-field">
+                    <label for="id_first_name">Имя</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="form-field">
+                    <label for="id_last_name">Фамилия</label>
+                    {{ form.last_name }}
+                </div>
+                <div class="form-field form-field-wide">
+                    <label for="id_email">Электронная почта</label>
+                    {{ form.email }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h4>Доступ и роль</h4>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="id_role">Роль</label>
+                    {{ form.role }}
+                </div>
+                <div class="form-field form-checks">
+                    <label class="settings-checkbox">
+                        {{ form.is_staff }}
+                        <span>Права администратора</span>
+                    </label>
+                    <label class="settings-checkbox">
+                        {{ form.is_blocked }}
+                        <span>Заблокировать пользователя</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-field">
+                <label>Кафедры</label>
+                <div class="checkbox-list">
+                    {{ form.departments }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit">Сохранить</button>
+            <a class="button button-secondary" href="{% url 'settings' %}?tab=users">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

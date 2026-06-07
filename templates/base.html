@@ -14,10 +14,10 @@
         <div class="brand">Соц. паспорт<br><span>студента</span></div>
         <nav class="menu">
             <a class="{% if request.resolver_match.url_name == 'student-list' %}active{% endif %}" href="{% url 'student-list' %}">Студенты</a>
-            <a class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}">Отчеты</a>
+            <a class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}">Отчёты</a>
             <a class="{% if request.resolver_match.url_name == 'ai-analytics' %}active{% endif %}" href="{% url 'ai-analytics' %}">ИИ-аналитика</a>
             <a class="{% if request.resolver_match.url_name == 'action-logs' %}active{% endif %}" href="{% url 'action-logs' %}">Журнал действий</a>
-            <a href="/admin/">Справочники / Пользователи</a>
+            <a class="{% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'user-create' or request.resolver_match.url_name == 'user-edit' or request.resolver_match.url_name == 'reference-edit' %}active{% endif %}" href="{% url 'settings' %}">Справочники / Пользователи</a>
         </nav>
     </aside>
     {% endif %}

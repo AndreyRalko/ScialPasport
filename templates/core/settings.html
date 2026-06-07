@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>Справочники и пользователи</h3>
+        <div class="muted">Управление справочными данными и учётными записями системы</div>
+    </div>
+    {% if tab == "users" %}
+        <a class="button" href="{% url 'user-create' %}">+ Добавить пользователя</a>
+    {% endif %}
+</div>
+
+<div class="settings-tabs">
+    <a class="settings-tab {% if tab == 'references' %}active{% endif %}" href="{% url 'settings' %}?tab=references&ref={{ ref_key }}">Справочники</a>
+    <a class="settings-tab {% if tab == 'users' %}active{% endif %}" href="{% url 'settings' %}?tab=users">Пользователи</a>
+</div>
+
+{% if tab == "references" %}
+<div class="settings-layout">
+    <aside class="settings-sidebar card">
+        <div class="settings-sidebar-title">Разделы</div>
+        {% for group in reference_groups %}
+        <div class="settings-group">
+            <div class="settings-group-label">{{ group.title }}</div>
+            {% for item in group.items %}
+            <a class="settings-nav-item {% if ref_key == item.key %}active{% endif %}"
+               href="{% url 'settings' %}?tab=references&ref={{ item.key }}">
+                {{ item.title }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </aside>
+
+    <div class="settings-main">
+        <div class="card settings-add-card">
+            <h4>Добавить: {{ ref_config.title }}</h4>
+            <form method="post" class="settings-add-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_reference">
+                <div class="settings-add-fields">
+                    <div class="settings-field">
+                        <label for="id_name">Название</label>
+                        {{ add_form.name }}
+                    </div>
+                    <label class="settings-checkbox">
+                        {{ add_form.is_active }}
+                        <span>Активен</span>
+                    </label>
+                </div>
+                <button type="submit">Добавить</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="settings-table-header">
+                <h4>{{ ref_config.title }}</h4>
+                <span class="muted">{{ reference_items|length }} записей</span>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Статус</th>
+                    <th>Обновлено</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in reference_items %}
+                <tr class="{% if not item.is_active %}row-inactive{% endif %}">
+                    <td>{{ item.name }}</td>
+                    <td>
+                        {% if item.is_active %}
+                            <span class="badge badge-blue">активен</span>
+                        {% else %}
+                            <span class="badge badge-gray">неактивен</span>
+                        {% endif %}
+                    </td>
+                    <td class="muted">{{ item.updated_at|date:"d.m.Y H:i" }}</td>
+                    <td class="settings-actions">
+                        <a href="{% url 'reference-edit' ref_key item.pk %}">Изменить</a>
+                        <form method="post" action="{% url 'reference-toggle' ref_key item.pk %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="link-button">
+                                {% if item.is_active %}Деактивировать{% else %}Активировать{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">Записей пока нет</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<div class="card">
+    <table>
+        <thead>
+        <tr>
+            <th>Логин</th>
+            <th>ФИО</th>
+            <th>Роль</th>
+            <th>Кафедры</th>
+            <th>Статус</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+        <tr>
+            <td>
+                <strong>{{ u.username }}</strong>
+                {% if u.is_staff %}<span class="badge badge-blue">администратор</span>{% endif %}
+            </td>
+            <td>{{ u.get_full_name|default:"—" }}</td>
+            <td>
+                {% if u.profile.role %}
+                    {{ u.profile.role }}
+                {% else %}
+                    <span class="muted">—</span>
+                {% endif %}
+            </td>
+            <td>
+                {% with deps=u.profile.departments.all %}
+                    {% if deps %}
+                        {{ deps|join:", " }}
+                    {% else %}
+                        <span class="muted">—</span>
+                    {% endif %}
+                {% endwith %}
+            </td>
+            <td>
+                {% if u.profile.is_blocked %}
+                    <span class="badge badge-red">заблокирован</span>
+                {% elif u.is_active %}
+                    <span class="badge badge-blue">активен</span>
+                {% else %}
+                    <span class="badge badge-gray">неактивен</span>
+                {% endif %}
+            </td>
+            <td><a href="{% url 'user-edit' u.pk %}">Изменить</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">Пользователи не найдены</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

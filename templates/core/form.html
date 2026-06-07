@@ -1,11 +1,43 @@
 {% extends "base.html" %}
 {% block content %}
-<h3>{{ title }}</h3>
-<div class="card">
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Сохранить</button>
-</form>
+{% if back_url %}
+<a class="back-link" href="{{ back_url }}">← {{ back_label|default:"Назад" }}</a>
+{% endif %}
+
+<div class="form-page-header">
+    <h3>{{ title }}</h3>
+    {% if subtitle %}<p class="muted">{{ subtitle }}</p>{% endif %}
+</div>
+
+<div class="card student-form-card">
+    <form method="post" class="student-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="login-error" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <div class="form-grid">
+            {% for field in form %}
+            <div class="form-field {% if field.field.widget.input_type == 'checkbox' %}form-field-check{% endif %}{% if field.field.widget.attrs.rows %} form-field-wide{% endif %}">
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <label class="settings-checkbox">
+                        {{ field }}
+                        <span>{{ field.label }}</span>
+                    </label>
+                {% else %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                {% endif %}
+                {% if field.help_text %}<span class="field-hint">{{ field.help_text }}</span>{% endif %}
+                {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="button">Сохранить</button>
+            {% if back_url %}
+                <a class="button button-secondary" href="{{ back_url }}">Отмена</a>
+            {% endif %}
+        </div>
+    </form>
 </div>
 {% endblock %}

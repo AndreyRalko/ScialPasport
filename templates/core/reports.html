@@ -1,17 +1,72 @@
 {% extends "base.html" %}
 {% block content %}
-<h3>Отчеты и выборки</h3>
-<div class="muted">Формирование экспортов в CSV/XLSX для администрации и кураторов</div>
+<h3>Отчёты и выборки</h3>
+<div class="muted">Формирование выгрузок для администрации и кураторов</div>
+
+<div class="card" style="margin-top:16px">
+    <div class="section-header" style="border:none;padding-bottom:0;margin-bottom:12px">
+        <h4>Заполненность карточек студентов по кафедрам</h4>
+        <div class="section-actions">
+            <a href="{% url 'report-export' 'card_completion' 'csv' %}">Скачать таблицу</a>
+            <a href="{% url 'report-export' 'card_completion' 'xlsx' %}">Скачать Excel</a>
+        </div>
+    </div>
+    <p class="muted" style="margin:0 0 14px;font-size:13px">
+        Средний процент заполнения блоков социального паспорта: семья, жильё, характеристика, учёба, медицина, льготы, ИИ-анализ.
+    </p>
+    <div class="report-table-wrap">
+        <table class="completion-table">
+            <thead>
+            <tr>
+                <th>Кафедра</th>
+                <th>Студентов</th>
+                <th>Средняя</th>
+                <th>Семья</th>
+                <th>Жильё</th>
+                <th>Характ.</th>
+                <th>Учёба</th>
+                <th>Медицина</th>
+                <th>Льготы</th>
+                <th>ИИ</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in completion_report %}
+            <tr>
+                <td><strong>{{ row.department }}</strong></td>
+                <td>{{ row.students_count }}</td>
+                <td>
+                    <span class="completion-badge {% if row.avg_percent >= 80 %}completion-good{% elif row.avg_percent >= 50 %}completion-mid{% else %}completion-low{% endif %}">
+                        {{ row.avg_percent }}%
+                    </span>
+                </td>
+                <td><span class="completion-pct">{{ row.family_percent }}%</span></td>
+                <td><span class="completion-pct">{{ row.housing_percent }}%</span></td>
+                <td><span class="completion-pct">{{ row.psycho_percent }}%</span></td>
+                <td><span class="completion-pct">{{ row.academic_percent }}%</span></td>
+                <td><span class="completion-pct">{{ row.medical_percent }}%</span></td>
+                <td><span class="completion-pct">{{ row.benefits_percent }}%</span></td>
+                <td><span class="completion-pct">{{ row.ai_percent }}%</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="10">Нет данных о студентах</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <div class="card">
 <table>
-    <thead><tr><th>Отчет</th><th>CSV</th><th>XLSX</th></tr></thead>
+    <thead><tr><th>Отчёт</th><th>Таблица</th><th>Excel</th></tr></thead>
     <tbody>
-        <tr><td>Студенты из малообеспеченных семей</td><td><a href="{% url 'report-export' 'low_income' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'low_income' 'xlsx' %}">XLSX</a></td></tr>
-        <tr><td>Студенты с инвалидностью</td><td><a href="{% url 'report-export' 'disability' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'disability' 'xlsx' %}">XLSX</a></td></tr>
-        <tr><td>Студенты, проживающие в общежитии</td><td><a href="{% url 'report-export' 'dormitory' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'dormitory' 'xlsx' %}">XLSX</a></td></tr>
-        <tr><td>Студенты с проблемной посещаемостью</td><td><a href="{% url 'report-export' 'problem_attendance' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'problem_attendance' 'xlsx' %}">XLSX</a></td></tr>
-        <tr><td>Студенты с низкой адаптацией</td><td><a href="{% url 'report-export' 'low_adaptation' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'low_adaptation' 'xlsx' %}">XLSX</a></td></tr>
-        <tr><td>Студенты с высоким риском (ИИ)</td><td><a href="{% url 'report-export' 'high_risk_ai' 'csv' %}">CSV</a></td><td><a href="{% url 'report-export' 'high_risk_ai' 'xlsx' %}">XLSX</a></td></tr>
+        <tr><td>Заполненность карточек по кафедрам</td><td><a href="{% url 'report-export' 'card_completion' 'csv' %}">Скачать</a></td><td><a href="{% url 'report-export' 'card_completion' 'xlsx' %}">Скачать</a></td></tr>
+        <tr><td>Студенты из малообеспеченных семей</td><td><a href="{% url 'report-export' 'low_income' 'csv' %}">Скачать</a></td><td><a href="{% url 'report-export' 'low_income' 'xlsx' %}">Скачать</a></td></tr>
+        <tr><td>Студенты с инвалидностью</td><td><a href="{% url 'report-export' 'disability' 'csv' %}">Скачать</a></td><td><a href="{% url 'report-export' 'disability' 'xlsx' %}">Скачать</a></td></tr>
+        <tr><td>Студенты, проживающие в общежитии</td><td><a href="{% url 'report-export' 'dormitory' 'csv' %}">Скачать</a></td><td><a href="{% url 'report-export' 'dormitory' 'xlsx' %}">Скачать</a></td></tr>
+        <tr><td>Студенты с проблемной посещаемостью</td><td><a href="{% url 'report-export' 'problem_attendance' 'csv' %}">Скачать</a></td><td><a href="{% url 'report-export' 'problem_attendance' 'xlsx' %}">Скачать</a></td></tr>
+        <tr><td>Студенты с низкой адаптацией</td><td><a href="{% url 'report-export' 'low_adaptation' 'csv' %}">Скачать</a></td><td><a href="{% url 'report-export' 'low_adaptation' 'xlsx' %}">Скачать</a></td></tr>
+        <tr><td>Студенты с высоким риском (ИИ)</td><td><a href="{% url 'report-export' 'high_risk_ai' 'csv' %}">Скачать</a></td><td><a href="{% url 'report-export' 'high_risk_ai' 'xlsx' %}">Скачать</a></td></tr>
     </tbody>
 </table>
 </div>

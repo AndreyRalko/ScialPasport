@@ -20,4 +20,9 @@ urlpatterns = [
     path("reports/", views.reports_page, name="reports"),
     path("reports/export/<str:report_key>/<str:fmt>/", views.export_report, name="report-export"),
     path("action-logs/", views.action_logs, name="action-logs"),
+    path("settings/", views.settings_page, name="settings"),
+    path("settings/references/<str:key>/<int:pk>/edit/", views.reference_edit, name="reference-edit"),
+    path("settings/references/<str:key>/<int:pk>/toggle/", views.reference_toggle, name="reference-toggle"),
+    path("settings/users/create/", views.user_create, name="user-create"),
+    path("settings/users/<int:pk>/edit/", views.user_edit, name="user-edit"),
 ]

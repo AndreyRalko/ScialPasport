@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+{% if student %}
+<a class="back-link" href="{% url 'student-detail' student.pk %}">← Назад к профилю</a>
+{% else %}
+<a class="back-link" href="{% url 'student-list' %}">← Назад к списку</a>
+{% endif %}
+
+<div class="form-page-header">
+    <h3>{{ title }}</h3>
+    {% if student %}<p class="muted">Редактирование данных {{ student.full_name }}</p>{% endif %}
+</div>
+
+<div class="card student-form-card">
+    <form method="post" class="student-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="login-error" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="form-section">
+            <h4 class="form-section-title">Личные данные</h4>
+            <div class="form-grid">
+                {% for field in personal_fields %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h4 class="form-section-title">Учёба</h4>
+            <div class="form-grid">
+                {% for field in academic_fields %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="button">Сохранить</button>
+            {% if student %}
+                <a class="button button-secondary" href="{% url 'student-detail' student.pk %}">Отмена</a>
+            {% else %}
+                <a class="button button-secondary" href="{% url 'student-list' %}">Отмена</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
