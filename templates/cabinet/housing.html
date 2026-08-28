@@ -1,0 +1,25 @@
+{% extends "cabinet/base.html" %}
+{% load i18n %}
+{% block content %}
+<h3>{% trans "Жильё" %}</h3>
+<div class="muted">{% trans "Укажите, где вы проживаете. Для заявки в общежитие напишите обращение." %}</div>
+
+<div class="card student-form-card" style="margin-top:12px">
+    <form method="post" class="student-form">
+        {% csrf_token %}
+        <div class="form-grid">
+            {% for field in form %}
+            <div class="form-field {% if field.field.widget.attrs.rows %}form-field-wide{% endif %}">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="form-actions">
+            <button type="submit">{% trans "Сохранить" %}</button>
+            <a class="button button-secondary" href="{% url 'cabinet-requests' %}">{% trans "Заявка куратору" %}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
 {% if back_url %}
-<a class="back-link" href="{{ back_url }}">← {{ back_label|default:"Назад" }}</a>
+<a class="back-link" href="{{ back_url }}">← {% if back_label %}{{ back_label }}{% else %}{% trans "Назад" %}{% endif %}</a>
 {% endif %}
 
 <div class="form-page-header">
@@ -33,9 +34,9 @@
             {% endfor %}
         </div>
         <div class="form-actions">
-            <button type="submit" class="button">Сохранить</button>
+            <button type="submit" class="button">{% trans "Сохранить" %}</button>
             {% if back_url %}
-                <a class="button button-secondary" href="{{ back_url }}">Отмена</a>
+                <a class="button button-secondary" href="{{ back_url }}">{% trans "Отмена" %}</a>
             {% endif %}
         </div>
     </form>

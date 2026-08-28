@@ -1,20 +1,27 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
-<h3>Журнал действий</h3>
-<div class="muted">Все действия пользователей в системе</div>
-<div class="card">
-<table>
-    <thead><tr><th>Дата</th><th>Пользователь</th><th>Действие</th><th>Описание</th></tr></thead>
-    <tbody>
-    {% for log in logs %}
-        <tr>
-            <td>{{ log.created_at }}</td>
-            <td>{{ log.user|default:"Система" }}</td>
-            <td>{{ log.get_action_display }}</td>
-            <td>{{ log.description }}</td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
-</div>
+<h3>{% trans "Журнал действий" %}</h3>
+<div class="muted">{% trans "Все действия пользователей в системе" %}</div>
+<details class="card collapsible" open data-collapse="logs-table" style="margin-top:12px">
+    <summary class="collapse-head">
+        <h4>{% trans "История действий" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead><tr><th>{% trans "Дата" %}</th><th>{% trans "Пользователь" %}</th><th>{% trans "Действие" %}</th><th>{% trans "Описание" %}</th></tr></thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td>{{ log.created_at }}</td>
+                    <td>{% if log.user %}{{ log.user }}{% else %}{% trans "Система" %}{% endif %}</td>
+                    <td>{{ log.get_action_display }}</td>
+                    <td>{{ log.description }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
 {% endblock %}

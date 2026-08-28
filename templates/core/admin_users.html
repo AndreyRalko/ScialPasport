@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>{% trans "Админ-панель" %}</h3>
+        <div class="muted">{% trans "Учётные записи, роли и статус доступа" %}</div>
+    </div>
+    <a class="button" href="{% url 'admin-user-create' %}">+ {% trans "Добавить пользователя" %}</a>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<details class="card collapsible" open data-collapse="admin-user-filters">
+    <summary class="collapse-head">
+        <h4>{% trans "Фильтры" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <form method="get" class="filter-form">
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label for="id_q">{% trans "Поиск" %}</label>
+                    <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="{% trans 'Логин, ФИО, почта' %}">
+                </div>
+                <div class="filter-item">
+                    <label for="id_role">{% trans "Роль" %}</label>
+                    <select id="id_role" name="role">
+                        <option value="">{% trans "Все" %}</option>
+                        {% for role in roles %}
+                            <option value="{{ role.pk }}" {% if role_id == role.pk|stringformat:"s" %}selected{% endif %}>{{ role }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label for="id_status">{% trans "Статус" %}</label>
+                    <select id="id_status" name="status">
+                        <option value="">{% trans "Все" %}</option>
+                        <option value="active" {% if status == "active" %}selected{% endif %}>{% trans "Активные" %}</option>
+                        <option value="blocked" {% if status == "blocked" %}selected{% endif %}>{% trans "Заблокированные" %}</option>
+                        <option value="staff" {% if status == "staff" %}selected{% endif %}>{% trans "Администраторы" %}</option>
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit">{% trans "Применить" %}</button>
+                <a class="button button-secondary" href="{% url 'admin-users' %}">{% trans "Сбросить" %}</a>
+            </div>
+        </form>
+    </div>
+</details>
+
+<details class="card collapsible" open data-collapse="admin-user-table">
+    <summary class="collapse-head">
+        <h4>{% trans "Пользователи" %}</h4>
+        <span class="muted">{{ users|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead>
+            <tr>
+                <th>{% trans "Логин" %}</th>
+                <th>{% trans "ФИО" %}</th>
+                <th>{% trans "Роль" %}</th>
+                <th>{% trans "Кафедры" %}</th>
+                <th>{% trans "Сессии" %}</th>
+                <th>{% trans "Последний вход" %}</th>
+                <th>{% trans "Статус" %}</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+            <tr class="{% if u.profile.is_blocked or not u.is_active %}row-inactive{% endif %}">
+                <td>
+                    <strong>{{ u.username }}</strong>
+                    {% if u.is_superuser %}<span class="badge badge-orange">{% trans "супер" %}</span>
+                    {% elif u.is_staff %}<span class="badge badge-blue">{% trans "админ" %}</span>{% endif %}
+                </td>
+                <td>{{ u.get_full_name|default:"—" }}</td>
+                <td>{% if u.profile.role %}{{ u.profile.role }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                <td>
+                    {% with deps=u.profile.departments.all %}
+                        {% if deps %}{{ deps|join:", " }}{% else %}<span class="muted">—</span>{% endif %}
+                    {% endwith %}
+                </td>
+                <td>{{ u.session_count }}</td>
+                <td>{% if u.last_login %}{{ u.last_login|date:"d.m.Y H:i" }}{% else %}—{% endif %}</td>
+                <td>
+                    {% if u.profile.is_blocked %}
+                        <span class="badge badge-red">{% trans "заблокирован" %}</span>
+                    {% elif u.is_active %}
+                        <span class="badge badge-blue">{% trans "активен" %}</span>
+                    {% else %}
+                        <span class="badge badge-gray">{% trans "неактивен" %}</span>
+                    {% endif %}
+                </td>
+                <td class="settings-actions">
+                    <a href="{% url 'admin-user-edit' u.pk %}">{% trans "Изменить" %}</a>
+                    <form method="post" action="{% url 'admin-user-toggle-block' u.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button">
+                            {% if u.profile.is_blocked %}{% trans "Разблокировать" %}{% else %}{% trans "Блокировать" %}{% endif %}
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'admin-user-logout-all' u.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'admin-users' %}">
+                        <button type="submit" class="link-button">{% trans "Сбросить сессии" %}</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8">{% trans "Пользователи не найдены" %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

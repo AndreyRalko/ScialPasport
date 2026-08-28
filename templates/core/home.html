@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="dash-welcome">
+    <div>
+        <h3>{% trans "Главная панель" %}</h3>
+        <div class="muted">{% trans "Сводка по социальным паспортам, быстрые действия и ИИ-ассистент" %}</div>
+    </div>
+    <div class="muted">{% now "d.m.Y H:i" %}</div>
+</div>
+
+<div class="dash-kpis">
+    <a class="dash-kpi" href="{% url 'student-list' %}">
+        <span class="muted">{% trans "Студенты" %}</span>
+        <strong>{{ total_students }}</strong>
+    </a>
+    <a class="dash-kpi dash-kpi-red" href="{% url 'ai-analytics' %}?risk_level=high">
+        <span class="muted">{% trans "Высокий риск" %}</span>
+        <strong>{{ high_risk }}</strong>
+    </a>
+    <a class="dash-kpi dash-kpi-orange" href="{% url 'student-list' %}">
+        <span class="muted">{% trans "Низкая адаптация" %}</span>
+        <strong>{{ low_adaptation }}</strong>
+    </a>
+    <a class="dash-kpi dash-kpi-orange" href="{% url 'reports' %}">
+        <span class="muted">{% trans "Проблемная посещаемость" %}</span>
+        <strong>{{ problem_attendance }}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'reports' %}">
+        <span class="muted">{% trans "Общежитие" %}</span>
+        <strong>{{ dormitory }}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'reports' %}">
+        <span class="muted">{% trans "Малообеспеченные" %}</span>
+        <strong>{{ low_income }}</strong>
+    </a>
+</div>
+
+<details class="card collapsible" open data-collapse="home-quick">
+    <summary class="collapse-head">
+        <h4>{% trans "Быстрые команды" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <div class="quick-grid">
+            {% for action in quick_actions %}
+            <a class="quick-card tone-{{ action.tone }}" href="{{ action.url }}">
+                <strong>{{ action.title }}</strong>
+                <span>{{ action.hint }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</details>
+
+<div class="dash-layout">
+    <div class="dash-main">
+        <div class="dash-two">
+            <details class="card collapsible" open data-collapse="home-risk">
+                <summary class="collapse-head">
+                    <h4>{% trans "Распределение риска (ИИ)" %}</h4>
+                    <span class="collapse-chevron" aria-hidden="true"></span>
+                </summary>
+                <div class="collapse-body">
+                    {% for bar in risk_bars %}
+                    <div class="chart-row">
+                        <span>{{ bar.label }}</span>
+                        <div class="chart-track"><div class="chart-fill risk-{{ bar.key }}" style="width:{{ bar.pct }}%"></div></div>
+                        <b>{{ bar.count }}</b>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+            <details class="card collapsible" open data-collapse="home-courses">
+                <summary class="collapse-head">
+                    <h4>{% trans "Студенты по курсам" %}</h4>
+                    <span class="collapse-chevron" aria-hidden="true"></span>
+                </summary>
+                <div class="collapse-body">
+                    {% for bar in course_bars %}
+                    <div class="chart-row">
+                        <span>{{ bar.label }}</span>
+                        <div class="chart-track"><div class="chart-fill" style="width:{{ bar.pct }}%"></div></div>
+                        <b>{{ bar.count }}</b>
+                    </div>
+                    {% empty %}
+                    <div class="muted">{% trans "Нет данных" %}</div>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <details class="card collapsible" open data-collapse="home-completion">
+            <summary class="collapse-head">
+                <h4>{% trans "Заполненность карточек по кафедрам" %}</h4>
+                <a href="{% url 'reports' %}">{% trans "Отчёты" %}</a>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="collapse-body">
+                {% for row in completion %}
+                <div class="chart-row">
+                    <span>{{ row.department }}</span>
+                    <div class="chart-track"><div class="chart-fill {% if row.avg_percent >= 80 %}fill-good{% elif row.avg_percent >= 50 %}fill-mid{% else %}fill-low{% endif %}" style="width:{{ row.avg_percent }}%"></div></div>
+                    <b>{{ row.avg_percent }}%</b>
+                </div>
+                {% empty %}
+                <div class="muted">{% trans "Нет данных о студентах" %}</div>
+                {% endfor %}
+            </div>
+        </details>
+
+        <details class="card collapsible" open data-collapse="home-attention">
+            <summary class="collapse-head">
+                <h4>{% trans "Зона внимания" %}</h4>
+                <a href="{% url 'ai-analytics' %}">{% trans "ИИ-аналитика" %}</a>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="collapse-body">
+                <div class="attention-list">
+                    {% for item in attention %}
+                    <a class="attention-item" href="{% url 'student-detail' item.student.pk %}">
+                        {% if item.student.photo %}
+                            <img src="{{ item.student.photo.url }}" alt="{{ item.student.full_name }}">
+                        {% else %}
+                            <div class="table-avatar table-avatar-fallback">{{ item.student.first_name|slice:":1" }}{{ item.student.last_name|slice:":1" }}</div>
+                        {% endif %}
+                        <div>
+                            <strong>{{ item.student.full_name }}</strong>
+                            <div class="muted">{{ item.student.group }} · {% trans "Курс" %} {{ item.student.course }}</div>
+                        </div>
+                        {% if item.risk == "high" %}
+                            <span class="badge badge-red">{{ item.risk_label }}</span>
+                        {% elif item.risk == "medium" %}
+                            <span class="badge badge-orange">{{ item.risk_label }}</span>
+                        {% else %}
+                            <span class="badge badge-gray">{{ item.risk_label }}</span>
+                        {% endif %}
+                    </a>
+                    {% empty %}
+                    <div class="muted">{% trans "Студенты в зоне внимания не найдены" %}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </details>
+
+        <details class="card collapsible" data-collapse="home-logs">
+            <summary class="collapse-head">
+                <h4>{% trans "Последние действия" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="collapse-body">
+                <table>
+                    <thead><tr><th>{% trans "Дата" %}</th><th>{% trans "Пользователь" %}</th><th>{% trans "Описание" %}</th></tr></thead>
+                    <tbody>
+                    {% for log in recent_logs %}
+                    <tr>
+                        <td>{{ log.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>{% if log.user %}{{ log.user }}{% else %}{% trans "Система" %}{% endif %}</td>
+                        <td>{{ log.description }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3">{% trans "Нет данных" %}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </details>
+    </div>
+
+    <details class="card assistant-card collapsible" open data-collapse="home-assistant">
+        <summary class="collapse-head">
+            <div>
+                <h4>{% trans "ИИ-ассистент" %}</h4>
+                <div class="muted">{% trans "RAG по карточкам студентов и сводкам системы" %}</div>
+            </div>
+            <span class="badge badge-blue">RAG</span>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
+            <div class="assistant-hints">
+                <button type="button" class="assistant-hint" data-q="{% trans 'Сколько студентов в зоне высокого риска?' %}">{% trans "Высокий риск" %}</button>
+                <button type="button" class="assistant-hint" data-q="{% trans 'Кто живёт в общежитии?' %}">{% trans "Общежитие" %}</button>
+                <button type="button" class="assistant-hint" data-q="{% trans 'Покажи малообеспеченных студентов' %}">{% trans "Малообеспеченные" %}</button>
+                <button type="button" class="assistant-hint" data-q="{% trans 'Сводка по системе' %}">{% trans "Сводка" %}</button>
+            </div>
+            <div id="assistant-thread" class="assistant-thread">
+                <div class="assistant-msg bot">{% trans "Задайте вопрос по студентам, рискам, жилью или льготам. Ответ строится только по данным паспортов." %}</div>
+            </div>
+            <form id="assistant-form" class="assistant-form">
+                {% csrf_token %}
+                <input id="assistant-input" type="text" autocomplete="off" placeholder="{% trans 'Например: кто с низкой адаптацией?' %}">
+                <button type="submit">{% trans "Спросить" %}</button>
+            </form>
+        </div>
+    </details>
+</div>
+
+<script>
+(function () {
+    const form = document.getElementById("assistant-form");
+    const input = document.getElementById("assistant-input");
+    const thread = document.getElementById("assistant-thread");
+    const askUrl = "{% url 'assistant-ask' %}";
+
+    function addMessage(text, role, extras) {
+        const wrap = document.createElement("div");
+        wrap.className = "assistant-msg " + role;
+        wrap.textContent = text;
+        if (extras && extras.length) {
+            const list = document.createElement("div");
+            list.className = "assistant-sources";
+            extras.forEach((item) => {
+                const link = document.createElement("a");
+                link.href = item.url;
+                link.textContent = item.name || item.title;
+                list.appendChild(link);
+            });
+            wrap.appendChild(list);
+        }
+        thread.appendChild(wrap);
+        thread.scrollTop = thread.scrollHeight;
+    }
+
+    async function ask(question) {
+        if (!question) return;
+        addMessage(question, "user");
+        input.value = "";
+        const body = new FormData();
+        body.append("csrfmiddlewaretoken", form.querySelector("[name=csrfmiddlewaretoken]").value);
+        body.append("message", question);
+        try {
+            const response = await fetch(askUrl, { method: "POST", body, headers: { "X-Requested-With": "XMLHttpRequest" } });
+            const data = await response.json();
+            addMessage(data.answer || "", "bot", data.students && data.students.length ? data.students : data.sources);
+        } catch (err) {
+            addMessage("{% trans 'Не удалось получить ответ ассистента.' %}", "bot");
+        }
+    }
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        ask(input.value.trim());
+    });
+    document.querySelectorAll(".assistant-hint").forEach((btn) => {
+        btn.addEventListener("click", () => ask(btn.dataset.q));
+    });
+})();
+</script>
+{% endblock %}

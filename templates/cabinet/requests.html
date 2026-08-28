@@ -1,0 +1,64 @@
+{% extends "cabinet/base.html" %}
+{% load i18n %}
+{% block content %}
+<h3>{% trans "Обращения" %}</h3>
+<div class="muted">{% trans "Сообщение увидит куратор или сотрудник сопровождения. Не указывайте лишние медицинские подробности, если об этом не просили." %}</div>
+
+<details class="card collapsible" open data-collapse="cab-req-new" style="margin-top:12px">
+    <summary class="collapse-head">
+        <h4>{% trans "Новое обращение" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <form method="post" class="student-form">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="id_request_type">{{ form.request_type.label }}</label>
+                    {{ form.request_type }}
+                </div>
+                <div class="form-field form-field-wide">
+                    <label for="id_message">{{ form.message.label }}</label>
+                    {{ form.message }}
+                    {{ form.message.errors }}
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit">{% trans "Отправить" %}</button>
+            </div>
+        </form>
+    </div>
+</details>
+
+<details class="card collapsible" open data-collapse="cab-req-list">
+    <summary class="collapse-head">
+        <h4>{% trans "Мои обращения" %}</h4>
+        <span class="muted">{{ requests|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead>
+            <tr>
+                <th>{% trans "Дата" %}</th>
+                <th>{% trans "Тип" %}</th>
+                <th>{% trans "Сообщение" %}</th>
+                <th>{% trans "Статус" %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in requests %}
+            <tr>
+                <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
+                <td>{{ item.get_request_type_display }}</td>
+                <td>{{ item.message }}</td>
+                <td><span class="badge {% if item.status == 'done' %}badge-blue{% elif item.status == 'in_progress' %}badge-orange{% else %}badge-gray{% endif %}">{{ item.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">{% trans "Обращений пока нет" %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

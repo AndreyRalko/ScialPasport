@@ -1,80 +1,96 @@
 {% extends "base.html" %}
+{% load i18n core_i18n %}
 {% block content %}
-<a class="back-link" href="{% url 'student-list' %}">← Назад к списку</a>
+<a class="back-link" href="{% url 'student-list' %}">← {% trans "Назад к списку" %}</a>
 
 <div class="profile-hero card">
     <div class="profile-hero-main">
-        <div class="profile-avatar" aria-hidden="true">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        {% if student.photo %}
+            <img class="profile-avatar-img" src="{{ student.photo.url }}" alt="{{ student.full_name }}">
+        {% else %}
+            <div class="profile-avatar" aria-hidden="true">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        {% endif %}
         <div class="profile-hero-info">
             <h3>{{ student.full_name }}</h3>
             <div class="profile-meta">
                 <span>{{ student.group }}</span>
                 <span class="profile-meta-dot">·</span>
-                <span>Курс {{ student.course }}</span>
+                <span>{% trans "Курс" %} {{ student.course }}</span>
                 <span class="profile-meta-dot">·</span>
-                <span>{{ student.age }} лет</span>
+                <span>{{ student.age }} {% trans "лет" %}</span>
             </div>
             <div class="profile-badges">
                 <span class="badge badge-blue">{{ student.payment_form }}</span>
                 <span class="badge badge-gray">{{ student.specialty }}</span>
                 {% if academic and academic.attendance == "problematic" %}
-                    <span class="badge badge-red">Проблемная посещаемость</span>
+                    <span class="badge badge-red">{% trans "Проблемная посещаемость" %}</span>
                 {% endif %}
                 {% if latest_ai and latest_ai.risk_level == "high" %}
-                    <span class="badge badge-red">Высокий риск</span>
+                    <span class="badge badge-red">{% trans "Высокий риск" %}</span>
                 {% elif latest_ai and latest_ai.risk_level == "medium" %}
-                    <span class="badge badge-orange">Средний риск</span>
+                    <span class="badge badge-orange">{% trans "Средний риск" %}</span>
+                {% endif %}
+                {% if student.user %}
+                    <span class="badge badge-blue">{% trans "Кабинет подключен" %}</span>
+                {% else %}
+                    <span class="badge badge-gray">{% trans "Кабинет не подключен" %}</span>
                 {% endif %}
             </div>
         </div>
     </div>
-    <a class="button" href="{% url 'student-update' student.pk %}">Редактировать профиль</a>
+    <a class="button" href="{% url 'student-update' student.pk %}">{% trans "Редактировать профиль" %}</a>
 </div>
 
 <div class="profile-tabs" id="student-tabs">
-    <button type="button" class="profile-tab tab-button active" data-tab="personal">Личные данные</button>
-    <button type="button" class="profile-tab tab-button" data-tab="family">Семья</button>
-    <button type="button" class="profile-tab tab-button" data-tab="housing">Жильё</button>
-    <button type="button" class="profile-tab tab-button" data-tab="psycho">Характеристика</button>
-    <button type="button" class="profile-tab tab-button" data-tab="academic">Учёба</button>
+    <button type="button" class="profile-tab tab-button active" data-tab="personal">{% trans "Личные данные" %}</button>
+    <button type="button" class="profile-tab tab-button" data-tab="family">{% trans "Семья" %}</button>
+    <button type="button" class="profile-tab tab-button" data-tab="housing">{% trans "Жильё" %}</button>
+    <button type="button" class="profile-tab tab-button" data-tab="psycho">{% trans "Характеристика" %}</button>
+    <button type="button" class="profile-tab tab-button" data-tab="academic">{% trans "Учёба" %}</button>
     {% if perms.core.view_studentmedical %}
-    <button type="button" class="profile-tab tab-button" data-tab="medical">Медицина</button>
+    <button type="button" class="profile-tab tab-button" data-tab="medical">{% trans "Медицина" %}</button>
     {% endif %}
-    <button type="button" class="profile-tab tab-button" data-tab="benefits">Льготы</button>
-    <button type="button" class="profile-tab tab-button" data-tab="ai">ИИ-анализ</button>
+    <button type="button" class="profile-tab tab-button" data-tab="benefits">{% trans "Льготы" %}</button>
+    <button type="button" class="profile-tab tab-button" data-tab="ai">{% trans "ИИ-анализ" %}</button>
+    <button type="button" class="profile-tab tab-button" data-tab="requests">{% trans "Обращения" %}</button>
 </div>
 
 <div class="tab-panel active" id="tab-personal">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>Личные и учебные данные</h4>
-            <a class="section-edit" href="{% url 'student-update' student.pk %}">Изменить</a>
-        </div>
+    <details class="section-card card collapsible" open data-collapse="profile-personal">
+        <summary class="collapse-head">
+            <h4>{% trans "Личные и учебные данные" %}</h4>
+            <a class="section-edit" href="{% url 'student-update' student.pk %}">{% trans "Изменить" %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         <div class="info-grid">
-            <div class="info-item"><span class="info-label">ИИН</span><span class="info-value">{{ student.iin }}</span></div>
-            <div class="info-item"><span class="info-label">Телефон</span><span class="info-value">{{ student.phone }}</span></div>
-            <div class="info-item"><span class="info-label">Дата рождения</span><span class="info-value">{{ student.birth_date|date:"d.m.Y" }}</span></div>
-            <div class="info-item"><span class="info-label">Гражданство</span><span class="info-value">{{ student.citizenship }}</span></div>
-            <div class="info-item"><span class="info-label">Национальность</span><span class="info-value">{{ student.nationality }}</span></div>
-            <div class="info-item"><span class="info-label">Кафедра</span><span class="info-value">{{ student.department }}</span></div>
-            <div class="info-item"><span class="info-label">Специальность</span><span class="info-value">{{ student.specialty }}</span></div>
-            <div class="info-item"><span class="info-label">Учебная группа</span><span class="info-value">{{ student.group }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "ИИН" %}</span><span class="info-value">{{ student.iin }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Телефон" %}</span><span class="info-value">{{ student.phone }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Дата рождения" %}</span><span class="info-value">{{ student.birth_date|date:"d.m.Y" }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Гражданство" %}</span><span class="info-value">{{ student.get_citizenship_display }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Национальность" %}</span><span class="info-value">{{ student.get_nationality_display }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Кафедра" %}</span><span class="info-value">{{ student.department }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Специальность" %}</span><span class="info-value">{{ student.specialty }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Учебная группа" %}</span><span class="info-value">{{ student.group }}</span></div>
         </div>
-    </div>
+        </div>
+    </details>
 </div>
 
 <div class="tab-panel" id="tab-family">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>Семья</h4>
+    <details class="section-card card collapsible" open data-collapse="profile-family">
+        <summary class="collapse-head">
+            <h4>{% trans "Семья" %}</h4>
             <div class="section-actions">
-                <a class="section-edit" href="{% url 'family-edit' student.pk %}">Изменить</a>
-                <a class="button button-sm" href="{% url 'family-member-create' student.pk %}">+ Добавить</a>
+                <a class="section-edit" href="{% url 'family-edit' student.pk %}">{% trans "Изменить" %}</a>
+                <a class="button button-sm" href="{% url 'family-member-create' student.pk %}">+ {% trans "Добавить" %}</a>
             </div>
-        </div>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         <div class="info-grid info-grid-2">
-            <div class="info-item"><span class="info-label">Тип семьи</span><span class="info-value">{{ family.family_type|default:"—" }}</span></div>
-            <div class="info-item"><span class="info-label">Материальное положение</span><span class="info-value">{{ family.income_level|default:"—" }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Тип семьи" %}</span><span class="info-value">{{ family.family_type|default:"—" }}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Материальное положение" %}</span><span class="info-value">{{ family.income_level|default:"—" }}</span></div>
         </div>
         {% if members %}
         <div class="member-list">
@@ -82,152 +98,204 @@
             <div class="member-card">
                 <div class="member-card-main">
                     <div class="member-name">{{ member.full_name }}</div>
-                    <div class="member-meta">{{ member.relation }}{% if member.birth_year %} · {{ member.birth_year }} г.р.{% endif %}</div>
-                    {% if member.workplace %}<div class="member-detail">{{ member.workplace }}{% if member.position %}, {{ member.position }}{% endif %}</div>{% endif %}
+                    <div class="member-meta">{{ member.get_relation_display }}{% if member.birth_year %} · {{ member.birth_year }} {% trans "г.р." %}{% endif %}</div>
+                    {% if member.workplace %}<div class="member-detail">{{ member.workplace|trans_db }}{% if member.position %}, {{ member.position|trans_db }}{% endif %}</div>{% endif %}
                     {% if member.phone %}<div class="member-detail">{{ member.phone }}</div>{% endif %}
                 </div>
                 <div class="member-tags">
-                    {% if member.is_guardian %}<span class="tag">Опекун</span>{% endif %}
-                    {% if member.is_primary_contact %}<span class="tag tag-blue">Контакт</span>{% endif %}
-                    <a class="member-delete" href="{% url 'family-member-delete' student.pk member.pk %}">Удалить</a>
+                    {% if member.is_guardian %}<span class="tag">{% trans "Опекун" %}</span>{% endif %}
+                    {% if member.is_primary_contact %}<span class="tag tag-blue">{% trans "Контакт" %}</span>{% endif %}
+                    <a class="member-delete" href="{% url 'family-member-delete' student.pk member.pk %}">{% trans "Удалить" %}</a>
                 </div>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <div class="empty-state">Члены семьи не добавлены</div>
+        <div class="empty-state">{% trans "Члены семьи не добавлены" %}</div>
         {% endif %}
-    </div>
+        </div>
+    </details>
 </div>
 
 <div class="tab-panel" id="tab-housing">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>Жилищные условия</h4>
-            <a class="section-edit" href="{% url 'housing-edit' student.pk %}">Изменить</a>
-        </div>
+    <details class="section-card card collapsible" open data-collapse="profile-housing">
+        <summary class="collapse-head">
+            <h4>{% trans "Жилищные условия" %}</h4>
+            <a class="section-edit" href="{% url 'housing-edit' student.pk %}">{% trans "Изменить" %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         <div class="info-grid info-grid-2">
-            <div class="info-item"><span class="info-label">Тип жилья</span><span class="info-value">{% if housing %}{{ housing.housing_type|default:"—" }}{% else %}—{% endif %}</span></div>
-            <div class="info-item info-item-wide"><span class="info-label">Комментарий</span><span class="info-value">{% if housing %}{{ housing.comment|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Тип жилья" %}</span><span class="info-value">{% if housing %}{{ housing.housing_type|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item info-item-wide"><span class="info-label">{% trans "Комментарий" %}</span><span class="info-value">{% if housing and housing.comment %}{{ housing.comment|trans_db }}{% else %}—{% endif %}</span></div>
         </div>
-    </div>
+        </div>
+    </details>
 </div>
 
 <div class="tab-panel" id="tab-psycho">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>Социально-психологическая характеристика</h4>
-            <a class="section-edit" href="{% url 'psycho-edit' student.pk %}">Изменить</a>
-        </div>
+    <details class="section-card card collapsible" open data-collapse="profile-psycho">
+        <summary class="collapse-head">
+            <h4>{% trans "Социально-психологическая характеристика" %}</h4>
+            <a class="section-edit" href="{% url 'psycho-edit' student.pk %}">{% trans "Изменить" %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         <div class="info-grid">
-            <div class="info-item"><span class="info-label">Темперамент</span><span class="info-value">{% if psycho %}{{ psycho.temperament|default:"—" }}{% else %}—{% endif %}</span></div>
-            <div class="info-item"><span class="info-label">Уровень общения</span><span class="info-value">{% if psycho %}{{ psycho.communication|default:"—" }}{% else %}—{% endif %}</span></div>
-            <div class="info-item"><span class="info-label">Поведение в группе</span><span class="info-value">{% if psycho %}{{ psycho.behavior_in_group|default:"—" }}{% else %}—{% endif %}</span></div>
-            <div class="info-item"><span class="info-label">Ответственность</span><span class="info-value">{% if psycho %}{{ psycho.responsibility_level|default:"—" }}{% else %}—{% endif %}</span></div>
-            <div class="info-item"><span class="info-label">Адаптация</span><span class="info-value">{% if psycho %}{{ psycho.adaptation_level|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Темперамент" %}</span><span class="info-value">{% if psycho %}{{ psycho.temperament|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Уровень общения" %}</span><span class="info-value">{% if psycho %}{{ psycho.communication|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Поведение в группе" %}</span><span class="info-value">{% if psycho %}{{ psycho.behavior_in_group|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Ответственность" %}</span><span class="info-value">{% if psycho %}{{ psycho.responsibility_level|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Адаптация" %}</span><span class="info-value">{% if psycho %}{{ psycho.adaptation_level|default:"—" }}{% else %}—{% endif %}</span></div>
             {% if psycho and psycho.description %}
-            <div class="info-item info-item-wide"><span class="info-label">Описание</span><span class="info-value">{{ psycho.description }}</span></div>
+            <div class="info-item info-item-wide"><span class="info-label">{% trans "Описание" %}</span><span class="info-value">{{ psycho.description|trans_db }}</span></div>
             {% endif %}
         </div>
-    </div>
+        </div>
+    </details>
 </div>
 
 <div class="tab-panel" id="tab-academic">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>Учебная деятельность</h4>
-            <a class="section-edit" href="{% url 'academic-edit' student.pk %}">Изменить</a>
-        </div>
+    <details class="section-card card collapsible" open data-collapse="profile-academic">
+        <summary class="collapse-head">
+            <h4>{% trans "Учебная деятельность" %}</h4>
+            <a class="section-edit" href="{% url 'academic-edit' student.pk %}">{% trans "Изменить" %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         <div class="info-grid">
-            <div class="info-item"><span class="info-label">Средний балл</span><span class="info-value info-value-lg">{% if academic %}{{ academic.gpa|default:"—" }}{% else %}—{% endif %}</span></div>
-            <div class="info-item"><span class="info-label">Посещаемость</span><span class="info-value">{% if academic and academic.attendance == "problematic" %}<span class="badge badge-red">{{ academic.get_attendance_display }}</span>{% elif academic and academic.attendance %}{{ academic.get_attendance_display }}{% else %}—{% endif %}</span></div>
-            <div class="info-item"><span class="info-label">Пропуски без причины</span><span class="info-value">{% if academic and academic.has_unexcused_absences %}Да ({{ academic.unexcused_absences_count }}){% else %}Нет{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Средний балл" %}</span><span class="info-value info-value-lg">{% if academic %}{{ academic.gpa|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Посещаемость" %}</span><span class="info-value">{% if academic and academic.attendance == "problematic" %}<span class="badge badge-red">{{ academic.get_attendance_display }}</span>{% elif academic and academic.attendance %}{{ academic.get_attendance_display }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Пропуски без причины" %}</span><span class="info-value">{% if academic and academic.has_unexcused_absences %}{% trans "Да" %} ({{ academic.unexcused_absences_count }}){% else %}{% trans "Нет" %}{% endif %}</span></div>
             {% if academic and academic.activity %}
-            <div class="info-item info-item-wide"><span class="info-label">Внеучебная активность</span><span class="info-value">{{ academic.activity }}</span></div>
+            <div class="info-item info-item-wide"><span class="info-label">{% trans "Внеучебная активность" %}</span><span class="info-value">{{ academic.activity|trans_db }}</span></div>
             {% endif %}
         </div>
-    </div>
+        </div>
+    </details>
 </div>
 
 {% if perms.core.view_studentmedical %}
 <div class="tab-panel" id="tab-medical">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>Медицинские сведения</h4>
-            <a class="section-edit" href="{% url 'medical-edit' student.pk %}">Изменить</a>
-        </div>
+    <details class="section-card card collapsible" open data-collapse="profile-medical">
+        <summary class="collapse-head">
+            <h4>{% trans "Медицинские сведения" %}</h4>
+            <a class="section-edit" href="{% url 'medical-edit' student.pk %}">{% trans "Изменить" %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         <div class="info-grid">
-            <div class="info-item"><span class="info-label">Группа здоровья</span><span class="info-value">{% if medical %}{{ medical.health_group|default:"—" }}{% else %}—{% endif %}</span></div>
-            <div class="info-item"><span class="info-label">Инвалидность</span><span class="info-value">{% if medical %}{{ medical.has_disability|yesno:"Да,Нет" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Группа здоровья" %}</span><span class="info-value">{% if medical %}{{ medical.health_group|default:"—" }}{% else %}—{% endif %}</span></div>
+            <div class="info-item"><span class="info-label">{% trans "Инвалидность" %}</span><span class="info-value">{% if medical %}{% if medical.has_disability %}{% trans "Да" %}{% else %}{% trans "Нет" %}{% endif %}{% else %}—{% endif %}</span></div>
             {% if medical and medical.disability_details %}
-            <div class="info-item info-item-wide"><span class="info-label">Сведения об инвалидности</span><span class="info-value">{{ medical.disability_details }}</span></div>
+            <div class="info-item info-item-wide"><span class="info-label">{% trans "Сведения об инвалидности" %}</span><span class="info-value">{{ medical.disability_details|trans_db }}</span></div>
             {% endif %}
             {% if medical and medical.chronic_diseases %}
-            <div class="info-item info-item-wide"><span class="info-label">Хронические заболевания</span><span class="info-value">{{ medical.chronic_diseases }}</span></div>
+            <div class="info-item info-item-wide"><span class="info-label">{% trans "Хронические заболевания" %}</span><span class="info-value">{{ medical.chronic_diseases|trans_db }}</span></div>
             {% endif %}
             {% if medical and medical.recommendations %}
-            <div class="info-item info-item-wide"><span class="info-label">Рекомендации</span><span class="info-value">{{ medical.recommendations }}</span></div>
+            <div class="info-item info-item-wide"><span class="info-label">{% trans "Рекомендации" %}</span><span class="info-value">{{ medical.recommendations|trans_db }}</span></div>
             {% endif %}
         </div>
-    </div>
+        </div>
+    </details>
 </div>
 {% endif %}
 
 <div class="tab-panel" id="tab-benefits">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>Льготы и поддержка</h4>
-            <a class="section-edit" href="{% url 'benefits-edit' student.pk %}">Изменить</a>
-        </div>
+    <details class="section-card card collapsible" open data-collapse="profile-benefits">
+        <summary class="collapse-head">
+            <h4>{% trans "Льготы и поддержка" %}</h4>
+            <a class="section-edit" href="{% url 'benefits-edit' student.pk %}">{% trans "Изменить" %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         <div class="benefits-grid">
-            <div class="benefit-chip {% if benefits and benefits.state_grant %}active{% endif %}">Госгрант</div>
-            <div class="benefit-chip {% if benefits and benefits.receives_scholarship %}active{% endif %}">Стипендия</div>
-            <div class="benefit-chip {% if benefits and benefits.disability_allowance %}active{% endif %}">Пособие по инвалидности</div>
-            <div class="benefit-chip {% if benefits and benefits.breadwinner_loss_allowance %}active{% endif %}">Потеря кормильца</div>
-            <div class="benefit-chip {% if benefits and benefits.preferential_housing %}active{% endif %}">Льготное жильё</div>
-            <div class="benefit-chip {% if benefits and benefits.free_meals %}active{% endif %}">Бесплатное питание</div>
+            <div class="benefit-chip {% if benefits and benefits.state_grant %}active{% endif %}">{% trans "Госгрант" %}</div>
+            <div class="benefit-chip {% if benefits and benefits.receives_scholarship %}active{% endif %}">{% trans "Стипендия" %}</div>
+            <div class="benefit-chip {% if benefits and benefits.disability_allowance %}active{% endif %}">{% trans "Пособие по инвалидности" %}</div>
+            <div class="benefit-chip {% if benefits and benefits.breadwinner_loss_allowance %}active{% endif %}">{% trans "Потеря кормильца" %}</div>
+            <div class="benefit-chip {% if benefits and benefits.preferential_housing %}active{% endif %}">{% trans "Льготное жильё" %}</div>
+            <div class="benefit-chip {% if benefits and benefits.free_meals %}active{% endif %}">{% trans "Бесплатное питание" %}</div>
         </div>
         {% if benefits and benefits.additional_benefits %}
-        <div class="info-item info-item-wide" style="margin-top:14px"><span class="info-label">Дополнительно</span><span class="info-value">{{ benefits.additional_benefits }}</span></div>
+        <div class="info-item info-item-wide" style="margin-top:14px"><span class="info-label">{% trans "Дополнительно" %}</span><span class="info-value">{{ benefits.additional_benefits|trans_db }}</span></div>
         {% endif %}
-    </div>
+        </div>
+    </details>
 </div>
 
 <div class="tab-panel" id="tab-ai">
-    <div class="section-card card">
-        <div class="section-header">
-            <h4>ИИ-анализ</h4>
-            <a class="button button-sm" href="{% url 'ai-generate' student.pk %}">{% if latest_ai %}Повторить анализ{% else %}Сформировать{% endif %}</a>
-        </div>
+    <details class="section-card card collapsible" open data-collapse="profile-ai">
+        <summary class="collapse-head">
+            <h4>{% trans "ИИ-анализ" %}</h4>
+            <a class="button button-sm" href="{% url 'ai-generate' student.pk %}">{% if latest_ai %}{% trans "Повторить анализ" %}{% else %}{% trans "Сформировать" %}{% endif %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
         {% if latest_ai %}
         <div class="ai-stats">
             <div class="ai-stat">
-                <span class="ai-stat-label">Уровень риска</span>
+                <span class="ai-stat-label">{% trans "Уровень риска" %}</span>
                 <span class="badge {% if latest_ai.risk_level == 'high' %}badge-red{% elif latest_ai.risk_level == 'medium' %}badge-orange{% else %}badge-blue{% endif %}">{{ latest_ai.get_risk_level_display }}</span>
             </div>
             <div class="ai-stat">
-                <span class="ai-stat-label">Сопровождение</span>
+                <span class="ai-stat-label">{% trans "Сопровождение" %}</span>
                 <span class="badge badge-gray">{{ latest_ai.get_support_level_display }}</span>
             </div>
             <div class="ai-stat">
-                <span class="ai-stat-label">Дата</span>
+                <span class="ai-stat-label">{% trans "Дата" %}</span>
                 <span class="info-value">{{ latest_ai.created_at|date:"d.m.Y H:i" }}</span>
             </div>
         </div>
         <div class="ai-blocks">
-            <div class="ai-block"><div class="ai-block-title">Профиль</div><p>{{ latest_ai.short_profile }}</p></div>
-            <div class="ai-block ai-block-green"><div class="ai-block-title">Сильные стороны</div><p>{{ latest_ai.strengths|linebreaksbr }}</p></div>
-            <div class="ai-block ai-block-red"><div class="ai-block-title">Факторы риска</div><p>{{ latest_ai.risk_factors|linebreaksbr }}</p></div>
-            <div class="ai-block ai-block-blue"><div class="ai-block-title">Рекомендации</div><p>{{ latest_ai.recommendations|linebreaksbr }}</p></div>
+            <div class="ai-block"><div class="ai-block-title">{% trans "Профиль" %}</div><p>{{ latest_ai.short_profile }}</p></div>
+            <div class="ai-block ai-block-green"><div class="ai-block-title">{% trans "Сильные стороны" %}</div><p>{{ latest_ai.strengths|linebreaksbr }}</p></div>
+            <div class="ai-block ai-block-red"><div class="ai-block-title">{% trans "Факторы риска" %}</div><p>{{ latest_ai.risk_factors|linebreaksbr }}</p></div>
+            <div class="ai-block ai-block-blue"><div class="ai-block-title">{% trans "Рекомендации" %}</div><p>{{ latest_ai.recommendations|linebreaksbr }}</p></div>
         </div>
         <p class="ai-disclaimer">{{ latest_ai.disclaimer }}</p>
         {% else %}
         <div class="empty-state">
-            <p>ИИ-анализ ещё не сформирован</p>
-            <a class="button" href="{% url 'ai-generate' student.pk %}">Сформировать анализ</a>
+            <p>{% trans "ИИ-анализ ещё не сформирован" %}</p>
+            <a class="button" href="{% url 'ai-generate' student.pk %}">{% trans "Сформировать анализ" %}</a>
         </div>
         {% endif %}
-    </div>
+        </div>
+    </details>
+</div>
+
+<div class="tab-panel" id="tab-requests">
+    <details class="section-card card collapsible" open data-collapse="profile-requests">
+        <summary class="collapse-head">
+            <h4>{% trans "Обращения из кабинета" %}</h4>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
+            <table>
+                <thead>
+                <tr>
+                    <th>{% trans "Дата" %}</th>
+                    <th>{% trans "Тип" %}</th>
+                    <th>{% trans "Сообщение" %}</th>
+                    <th>{% trans "Статус" %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in cabinet_requests %}
+                <tr>
+                    <td>{{ item.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ item.get_request_type_display }}</td>
+                    <td>{{ item.message }}</td>
+                    <td>{{ item.get_status_display }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4">{% trans "Обращений пока нет" %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
 </div>
 
 <script>

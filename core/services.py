@@ -1,6 +1,9 @@
 from collections import defaultdict
 
-from .models import Student, StudentAIAnalysis
+from django.utils.translation import gettext as _
+
+from .llm import LLMError, complete_json, student_brief
+from .models import AISettings, Student, StudentAIAnalysis
 
 CARD_BLOCKS = [
     ("family", "Семья"),
@@ -14,6 +17,58 @@ CARD_BLOCKS = [
 
 
 def build_ai_analysis(student: Student) -> StudentAIAnalysis:
+    settings = AISettings.load()
+    if settings.is_ready():
+        try:
+            return _build_llm_analysis(student, settings)
+        except LLMError:
+            pass
+    return _build_rule_analysis(student)
+
+
+def _build_llm_analysis(student: Student, settings: AISettings) -> StudentAIAnalysis:
+    payload = complete_json(
+        (
+            "You are a university social-support analyst. Return ONLY JSON with keys: "
+            "short_profile, strengths, risk_factors, recommendations, risk_level, support_level. "
+            "risk_level must be low, medium or high. "
+            "support_level must be none, observe, curator_attention or specialist. "
+            "Write the text fields in the same language as the student context (Russian or Kazakh). "
+            "Do not invent medical diagnoses or personal identifiers."
+        ),
+        (
+            "Build a brief social-passport analysis from this context:\n"
+            + str(student_brief(student))
+        ),
+        max_tokens=700,
+        timeout=40,
+        settings=settings,
+    )
+    risk = payload.get("risk_level") if payload.get("risk_level") in {"low", "medium", "high"} else "low"
+    support = payload.get("support_level")
+    if support not in {"none", "observe", "curator_attention", "specialist"}:
+        support = "observe" if risk != "low" else "none"
+    return StudentAIAnalysis.objects.create(
+        student=student,
+        short_profile=str(payload.get("short_profile") or "").strip()
+        or _("%(name)s: курс %(course)s, группа %(group)s. Оценка выполнена по данным социального паспорта.")
+        % {
+            "name": student.full_name,
+            "course": student.course,
+            "group": getattr(student.group, "name", "") or "—",
+        },
+        strengths=str(payload.get("strengths") or "").strip()
+        or _("Явные сильные стороны не выделены автоматически."),
+        risk_factors=str(payload.get("risk_factors") or "").strip()
+        or _("Значимые факторы риска не обнаружены."),
+        recommendations=str(payload.get("recommendations") or "").strip()
+        or _("Продолжать плановое сопровождение и периодический мониторинг."),
+        risk_level=risk,
+        support_level=support,
+    )
+
+
+def _build_rule_analysis(student: Student) -> StudentAIAnalysis:
     risk_points = 0
     strengths = []
     risks = []
@@ -26,36 +81,42 @@ def build_ai_analysis(student: Student) -> StudentAIAnalysis:
 
     if academic:
         if academic.gpa and academic.gpa >= 3.3:
-            strengths.append("Стабильная академическая успеваемость")
+            strengths.append(_("Стабильная академическая успеваемость"))
         if academic.attendance == "problematic":
             risk_points += 2
-            risks.append("Проблемная посещаемость")
-            recommendations.append("Обратить внимание на частые пропуски")
+            risks.append(_("Проблемная посещаемость"))
+            recommendations.append(_("Обратить внимание на частые пропуски"))
         if academic.has_unexcused_absences:
             risk_points += 2
-            risks.append("Есть пропуски без уважительной причины")
-            recommendations.append("Провести индивидуальную беседу куратора")
+            risks.append(_("Есть пропуски без уважительной причины"))
+            recommendations.append(_("Провести индивидуальную беседу куратора"))
         if academic.activity:
-            strengths.append("Участвует во внеучебной активности")
+            strengths.append(_("Участвует во внеучебной активности"))
 
-    if family and family.income_level and "малообеспеч" in family.income_level.name.lower():
+    income = getattr(family, "income_level", None) if family else None
+    if income and (
+        income.code == "familyincomelevel_low_income"
+        or "малообеспеч" in (income.name_ru or "").lower()
+        or "аз қамтылған" in income.name.lower()
+    ):
         risk_points += 2
-        risks.append("Затруднительное материальное положение")
-        recommendations.append("Проверить доступные меры социальной поддержки")
+        risks.append(_("Затруднительное материальное положение"))
+        recommendations.append(_("Проверить доступные меры социальной поддержки"))
 
     if psycho and psycho.adaptation_level:
-        adaptation = psycho.adaptation_level.name.lower()
-        if "низ" in adaptation:
+        adaptation = psycho.adaptation_level
+        adaptation_name = f"{adaptation.name} {adaptation.name_ru}".lower()
+        if adaptation.code == "adaptationlevel_low" or "низ" in adaptation_name or "төмен" in adaptation_name:
             risk_points += 2
-            risks.append("Низкая адаптация к университету")
-            recommendations.append("Рекомендовать консультацию психолога")
-        elif "выс" in adaptation:
-            strengths.append("Хороший уровень адаптации")
+            risks.append(_("Низкая адаптация к университету"))
+            recommendations.append(_("Рекомендовать консультацию психолога"))
+        elif adaptation.code == "adaptationlevel_high" or "выс" in adaptation_name or "жоғары" in adaptation_name:
+            strengths.append(_("Хороший уровень адаптации"))
 
     if medical and medical.has_disability:
         risk_points += 1
-        risks.append("Требуется учитывать медицинские ограничения")
-        recommendations.append("Согласовать индивидуальное сопровождение при необходимости")
+        risks.append(_("Требуется учитывать медицинские ограничения"))
+        recommendations.append(_("Согласовать индивидуальное сопровождение при необходимости"))
 
     if risk_points >= 5:
         risk_level = "high"
@@ -70,16 +131,15 @@ def build_ai_analysis(student: Student) -> StudentAIAnalysis:
         risk_level = "low"
         support_level = "none"
 
-    short_profile = (
-        f"{student.full_name}: курс {student.course}, группа {student.group.name}. "
-        f"Оценка выполнена по данным социального паспорта."
-    )
-    strengths_text = "\n".join(strengths) if strengths else "Явные сильные стороны не выделены автоматически."
-    risks_text = "\n".join(risks) if risks else "Значимые факторы риска не обнаружены."
+    short_profile = _(
+        "%(name)s: курс %(course)s, группа %(group)s. Оценка выполнена по данным социального паспорта."
+    ) % {"name": student.full_name, "course": student.course, "group": student.group.name}
+    strengths_text = "\n".join(strengths) if strengths else _("Явные сильные стороны не выделены автоматически.")
+    risks_text = "\n".join(risks) if risks else _("Значимые факторы риска не обнаружены.")
     recommendations_text = (
         "\n".join(dict.fromkeys(recommendations))
         if recommendations
-        else "Продолжать плановое сопровождение и периодический мониторинг."
+        else _("Продолжать плановое сопровождение и периодический мониторинг.")
     )
 
     return StudentAIAnalysis.objects.create(
@@ -216,7 +276,7 @@ def get_department_completion_report():
     for student in students:
         dept_id = student.department_id
         stats = dept_stats[dept_id]
-        stats["department"] = student.department.name
+        stats["department"] = student.department.localized_name
         stats["students_count"] += 1
         completion = get_student_completion(student)
         stats["total_percent"] += completion["percent"]
@@ -241,8 +301,8 @@ def get_department_completion_report():
 
 
 def get_card_completion_export_rows():
-    headers = ["Кафедра", "Студентов", "Средняя заполненность, %"]
-    headers.extend(f"{label}, %" for _, label in CARD_BLOCKS)
+    headers = [_("Кафедра"), _("Студентов"), _("Средняя заполненность, %")]
+    headers.extend(f"{_(label)}, %" for _, label in CARD_BLOCKS)
     rows = get_department_completion_report()
     data = [
         [r["department"], r["students_count"], r["avg_percent"]]

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>{% trans "Админ-панель" %}</h3>
+        <div class="muted">{% trans "Группы Django и набор прав" %}</div>
+    </div>
+    <a class="button" href="{% url 'admin-group-create' %}">+ {% trans "Новая группа" %}</a>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<details class="card collapsible" open data-collapse="admin-groups">
+    <summary class="collapse-head">
+        <h4>{% trans "Группы и права" %}</h4>
+        <span class="muted">{{ groups|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead>
+            <tr>
+                <th>{% trans "Название" %}</th>
+                <th>{% trans "Пользователи" %}</th>
+                <th>{% trans "Права" %}</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for group in groups %}
+            <tr>
+                <td><strong>{{ group.name }}</strong></td>
+                <td>{{ group.user_count }}</td>
+                <td>{{ group.perm_count }}</td>
+                <td><a href="{% url 'admin-group-edit' group.pk %}">{% trans "Изменить права" %}</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">{% trans "Группы не найдены" %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

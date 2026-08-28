@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>{% trans "Админ-панель" %}</h3>
+        <div class="muted">{% trans "Активные сессии пользователей" %}</div>
+    </div>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<details class="card collapsible" open data-collapse="admin-sessions">
+    <summary class="collapse-head">
+        <h4>{% trans "Сессии" %}</h4>
+        <span class="muted">{{ sessions|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead>
+            <tr>
+                <th>{% trans "Пользователь" %}</th>
+                <th>{% trans "Роль" %}</th>
+                <th>{% trans "Ключ сессии" %}</th>
+                <th>{% trans "Истекает" %}</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in sessions %}
+            <tr>
+                <td>
+                    {% if item.user %}
+                        <a href="{% url 'admin-user-edit' item.user.pk %}">{{ item.user.get_full_name|default:item.user.username }}</a>
+                        {% if item.session_key == current_session_key %}<span class="badge badge-blue">{% trans "текущая" %}</span>{% endif %}
+                    {% else %}
+                        <span class="muted">{% trans "Анонимная / истекшая" %}</span>
+                    {% endif %}
+                </td>
+                <td>{% if item.user and item.user.profile.role %}{{ item.user.profile.role }}{% else %}—{% endif %}</td>
+                <td><code class="session-key">{{ item.session_key|slice:":12" }}…</code></td>
+                <td>{{ item.expire_date|date:"d.m.Y H:i" }}</td>
+                <td class="settings-actions">
+                    {% if item.session_key != current_session_key %}
+                    <form method="post" action="{% url 'admin-session-terminate' item.session_key %}" class="inline-form">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button">{% trans "Завершить" %}</button>
+                    </form>
+                    {% if item.user %}
+                    <form method="post" action="{% url 'admin-user-logout-all' item.user.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'admin-sessions' %}">
+                        <button type="submit" class="link-button">{% trans "Все сессии" %}</button>
+                    </form>
+                    {% endif %}
+                    {% else %}
+                    <span class="muted">{% trans "это вы" %}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">{% trans "Активных сессий нет" %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

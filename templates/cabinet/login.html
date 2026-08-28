@@ -1,0 +1,104 @@
+{% load i18n static %}
+{% get_current_language as LANGUAGE_CODE %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "Кабинет студента" %}</title>
+    {% include "includes/brand_favicons.html" %}
+    <script>
+    (function () {
+        try {
+            var stored = localStorage.getItem("sp-theme");
+            var theme = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+            document.documentElement.setAttribute("data-theme", "light");
+        }
+    })();
+    </script>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body class="login-page">
+<div class="login-shell">
+    <section class="login-hero">
+        <div class="login-hero-content">
+            <div class="login-logo">
+                {% include "includes/brand_wordmark.html" with surface="dark" size_class="brand-wordmark-hero" %}
+            </div>
+            <h1>{% trans "Кабинет студента" %}</h1>
+            <p class="login-tagline">{% trans "Просматривайте свои данные, обновляйте контакты и пишите куратору. Чужие карточки и служебные пометки здесь недоступны." %}</p>
+            <ul class="login-features">
+                <li>{% trans "Контакты, семья и жильё" %}</li>
+                <li>{% trans "Статус льгот" %}</li>
+                <li>{% trans "Обращения к куратору" %}</li>
+            </ul>
+        </div>
+        <div class="login-hero-glow" aria-hidden="true"></div>
+    </section>
+    <section class="login-panel">
+        <div class="login-card">
+            <div class="login-card-header">
+                <div class="login-toolbar">
+                    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="{% trans 'Переключить тему' %}">
+                        <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.2 3.2l1 1M11.8 11.8l1 1M12.8 3.2l-1 1M4.2 11.8l-1 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M13 10.2A5.5 5.5 0 1 1 5.8 3 4.4 4.4 0 0 0 13 10.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <form action="{% url 'set_language' %}" method="post" class="lang-switcher login-lang">
+                        {% csrf_token %}
+                        <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                        <button type="submit" name="language" value="kk" class="{% if LANGUAGE_CODE == 'kk' %}active{% endif %}">ҚАЗ</button>
+                        <button type="submit" name="language" value="ru" class="{% if LANGUAGE_CODE == 'ru' %}active{% endif %}">РУС</button>
+                    </form>
+                </div>
+                <div class="login-card-brand">
+                    {% include "includes/brand_wordmark.html" with size_class="brand-wordmark-card" %}
+                </div>
+                <h2>{% trans "Вход в кабинет" %}</h2>
+                <p>{% trans "Укажите ИИН и пароль, выданный куратором" %}</p>
+            </div>
+            {% if form.non_field_errors %}
+            <div class="login-error" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <form method="post" class="login-form">
+                {% csrf_token %}
+                <div class="login-field">
+                    <label for="id_iin">{{ form.iin.label }}</label>
+                    <div class="login-input-wrap">
+                        {{ form.iin }}
+                    </div>
+                    {{ form.iin.errors }}
+                </div>
+                <div class="login-field">
+                    <label for="id_password">{{ form.password.label }}</label>
+                    <div class="login-input-wrap">
+                        {{ form.password }}
+                    </div>
+                    {{ form.password.errors }}
+                </div>
+                <button type="submit" class="login-submit">{% trans "Войти в кабинет" %}</button>
+            </form>
+            <p class="login-footer"><a href="{% url 'login' %}">{% trans "Вход для сотрудников" %}</a></p>
+        </div>
+    </section>
+</div>
+<script>
+(function () {
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+    if (!toggle) return;
+    toggle.addEventListener("click", function () {
+        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        try { localStorage.setItem("sp-theme", next); } catch (e) {}
+    });
+})();
+</script>
+</body>
+</html>

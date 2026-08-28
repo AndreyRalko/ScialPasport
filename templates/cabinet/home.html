@@ -1,0 +1,87 @@
+{% extends "cabinet/base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="profile-hero card">
+    <div class="profile-hero-main">
+        {% if student.photo %}
+            <img class="profile-avatar-img" src="{{ student.photo.url }}" alt="{{ student.full_name }}">
+        {% else %}
+            <div class="profile-avatar">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+        {% endif %}
+        <div class="profile-hero-info">
+            <h3>{{ student.full_name }}</h3>
+            <div class="profile-meta">
+                <span>{{ student.group }}</span>
+                <span class="profile-meta-dot">·</span>
+                <span>{% trans "Курс" %} {{ student.course }}</span>
+                <span class="profile-meta-dot">·</span>
+                <span>{{ student.specialty }}</span>
+            </div>
+            <div class="profile-badges">
+                <span class="badge badge-blue">{{ student.payment_form }}</span>
+                <span class="badge badge-gray">{{ student.department }}</span>
+            </div>
+        </div>
+    </div>
+    <a class="button" href="{% url 'cabinet-requests' %}">{% trans "Написать куратору" %}</a>
+</div>
+
+<div class="dash-kpis" style="grid-template-columns:repeat(4,1fr)">
+    <a class="dash-kpi" href="{% url 'cabinet-profile' %}">
+        <span class="muted">{% trans "Телефон" %}</span>
+        <strong style="font-size:16px">{{ student.phone }}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'cabinet-housing' %}">
+        <span class="muted">{% trans "Жильё" %}</span>
+        <strong style="font-size:16px">{% if housing and housing.housing_type %}{{ housing.housing_type }}{% else %}—{% endif %}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'cabinet-family' %}">
+        <span class="muted">{% trans "Семья" %}</span>
+        <strong style="font-size:16px">{% if family and family.family_type %}{{ family.family_type }}{% else %}—{% endif %}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'cabinet-requests' %}">
+        <span class="muted">{% trans "Обращения" %}</span>
+        <strong>{{ requests|length }}</strong>
+    </a>
+</div>
+
+<div class="dash-two">
+    <details class="card collapsible" open data-collapse="cab-benefits">
+        <summary class="collapse-head">
+            <h4>{% trans "Льготы и поддержка" %}</h4>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
+            <div class="benefits-grid">
+                <div class="benefit-chip {% if benefits and benefits.state_grant %}active{% endif %}">{% trans "Госгрант" %}</div>
+                <div class="benefit-chip {% if benefits and benefits.receives_scholarship %}active{% endif %}">{% trans "Стипендия" %}</div>
+                <div class="benefit-chip {% if benefits and benefits.disability_allowance %}active{% endif %}">{% trans "Пособие по инвалидности" %}</div>
+                <div class="benefit-chip {% if benefits and benefits.breadwinner_loss_allowance %}active{% endif %}">{% trans "Потеря кормильца" %}</div>
+                <div class="benefit-chip {% if benefits and benefits.preferential_housing %}active{% endif %}">{% trans "Льготное жильё" %}</div>
+                <div class="benefit-chip {% if benefits and benefits.free_meals %}active{% endif %}">{% trans "Бесплатное питание" %}</div>
+            </div>
+            <p class="muted" style="margin-top:10px">{% trans "Если сведения неверны, отправьте обращение куратору." %}</p>
+        </div>
+    </details>
+    <details class="card collapsible" open data-collapse="cab-requests">
+        <summary class="collapse-head">
+            <h4>{% trans "Последние обращения" %}</h4>
+            <a href="{% url 'cabinet-requests' %}">{% trans "Все" %}</a>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
+            {% for item in requests %}
+            <div class="member-card">
+                <div>
+                    <div class="member-name">{{ item.get_request_type_display }}</div>
+                    <div class="member-meta">{{ item.created_at|date:"d.m.Y H:i" }}</div>
+                </div>
+                <span class="badge {% if item.status == 'done' %}badge-blue{% elif item.status == 'in_progress' %}badge-orange{% else %}badge-gray{% endif %}">{{ item.get_status_display }}</span>
+            </div>
+            {% empty %}
+            <div class="muted">{% trans "Обращений пока нет" %}</div>
+            {% endfor %}
+        </div>
+    </details>
+</div>
+{% endblock %}

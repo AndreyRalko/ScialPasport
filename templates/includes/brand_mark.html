@@ -1,0 +1,9 @@
+{% load static %}
+{% if surface == "dark" %}
+<img class="brand-mark" src="{% static 'brand/mark-dark.png' %}" alt="Ualikhanov University" width="36" height="36">
+{% elif surface == "light" %}
+<img class="brand-mark" src="{% static 'brand/mark-light.png' %}" alt="Ualikhanov University" width="36" height="36">
+{% else %}
+<img class="brand-mark brand-on-light" src="{% static 'brand/mark-light.png' %}" alt="Ualikhanov University" width="36" height="36">
+<img class="brand-mark brand-on-dark" src="{% static 'brand/mark-dark.png' %}" alt="" width="36" height="36">
+{% endif %}

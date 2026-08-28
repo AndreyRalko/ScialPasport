@@ -1,24 +1,22 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
 <div class="topbar">
     <div>
-        <h3>Справочники и пользователи</h3>
-        <div class="muted">Управление справочными данными и учётными записями системы</div>
+        <h3>{% trans "Справочники и пользователи" %}</h3>
+        <div class="muted">{% trans "Каждая запись справочника хранится на казахском и русском языках" %}</div>
     </div>
-    {% if tab == "users" %}
-        <a class="button" href="{% url 'user-create' %}">+ Добавить пользователя</a>
-    {% endif %}
+    <a class="button button-secondary" href="{% url 'admin-panel' %}">{% trans "Админ-панель" %}</a>
 </div>
 
 <div class="settings-tabs">
-    <a class="settings-tab {% if tab == 'references' %}active{% endif %}" href="{% url 'settings' %}?tab=references&ref={{ ref_key }}">Справочники</a>
-    <a class="settings-tab {% if tab == 'users' %}active{% endif %}" href="{% url 'settings' %}?tab=users">Пользователи</a>
+    <a class="settings-tab {% if tab == 'references' %}active{% endif %}" href="{% url 'settings' %}?tab=references&ref={{ ref_key }}">{% trans "Справочники" %}</a>
+    <a class="settings-tab" href="{% url 'admin-users' %}">{% trans "Пользователи" %}</a>
 </div>
 
-{% if tab == "references" %}
 <div class="settings-layout">
     <aside class="settings-sidebar card">
-        <div class="settings-sidebar-title">Разделы</div>
+        <div class="settings-sidebar-title">{% trans "Разделы" %}</div>
         {% for group in reference_groups %}
         <div class="settings-group">
             <div class="settings-group-label">{{ group.title }}</div>
@@ -33,36 +31,48 @@
     </aside>
 
     <div class="settings-main">
-        <div class="card settings-add-card">
-            <h4>Добавить: {{ ref_config.title }}</h4>
+        <details class="card settings-add-card collapsible" open data-collapse="settings-add">
+            <summary class="collapse-head">
+                <h4>{% trans "Добавить:" %} {{ ref_config.title }}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="collapse-body">
             <form method="post" class="settings-add-form">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_reference">
                 <div class="settings-add-fields">
                     <div class="settings-field">
-                        <label for="id_name">Название</label>
+                        <label for="id_name">{{ add_form.name.label }}</label>
                         {{ add_form.name }}
+                    </div>
+                    <div class="settings-field">
+                        <label for="id_name_ru">{{ add_form.name_ru.label }}</label>
+                        {{ add_form.name_ru }}
                     </div>
                     <label class="settings-checkbox">
                         {{ add_form.is_active }}
-                        <span>Активен</span>
+                        <span>{% trans "Активен" %}</span>
                     </label>
                 </div>
-                <button type="submit">Добавить</button>
+                <button type="submit">{% trans "Добавить" %}</button>
             </form>
-        </div>
-
-        <div class="card">
-            <div class="settings-table-header">
-                <h4>{{ ref_config.title }}</h4>
-                <span class="muted">{{ reference_items|length }} записей</span>
             </div>
+        </details>
+
+        <details class="card collapsible" open data-collapse="settings-table">
+            <summary class="collapse-head">
+                <h4>{{ ref_config.title }}</h4>
+                <span class="muted">{{ reference_items|length }} {% trans "записей" %}</span>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="collapse-body">
             <table>
                 <thead>
                 <tr>
-                    <th>Название</th>
-                    <th>Статус</th>
-                    <th>Обновлено</th>
+                    <th>{% trans "Название (қаз)" %}</th>
+                    <th>{% trans "Название (рус)" %}</th>
+                    <th>{% trans "Статус" %}</th>
+                    <th>{% trans "Обновлено" %}</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -70,86 +80,32 @@
                 {% for item in reference_items %}
                 <tr class="{% if not item.is_active %}row-inactive{% endif %}">
                     <td>{{ item.name }}</td>
+                    <td>{% if item.name_ru %}{{ item.name_ru }}{% else %}<span class="muted">—</span>{% endif %}</td>
                     <td>
                         {% if item.is_active %}
-                            <span class="badge badge-blue">активен</span>
+                            <span class="badge badge-blue">{% trans "активен" %}</span>
                         {% else %}
-                            <span class="badge badge-gray">неактивен</span>
+                            <span class="badge badge-gray">{% trans "неактивен" %}</span>
                         {% endif %}
                     </td>
                     <td class="muted">{{ item.updated_at|date:"d.m.Y H:i" }}</td>
                     <td class="settings-actions">
-                        <a href="{% url 'reference-edit' ref_key item.pk %}">Изменить</a>
+                        <a href="{% url 'reference-edit' ref_key item.pk %}">{% trans "Изменить" %}</a>
                         <form method="post" action="{% url 'reference-toggle' ref_key item.pk %}" class="inline-form">
                             {% csrf_token %}
                             <button type="submit" class="link-button">
-                                {% if item.is_active %}Деактивировать{% else %}Активировать{% endif %}
+                                {% if item.is_active %}{% trans "Деактивировать" %}{% else %}{% trans "Активировать" %}{% endif %}
                             </button>
                         </form>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="4">Записей пока нет</td></tr>
+                <tr><td colspan="5">{% trans "Записей пока нет" %}</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
-        </div>
+            </div>
+        </details>
     </div>
 </div>
-
-{% else %}
-<div class="card">
-    <table>
-        <thead>
-        <tr>
-            <th>Логин</th>
-            <th>ФИО</th>
-            <th>Роль</th>
-            <th>Кафедры</th>
-            <th>Статус</th>
-            <th></th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for u in users %}
-        <tr>
-            <td>
-                <strong>{{ u.username }}</strong>
-                {% if u.is_staff %}<span class="badge badge-blue">администратор</span>{% endif %}
-            </td>
-            <td>{{ u.get_full_name|default:"—" }}</td>
-            <td>
-                {% if u.profile.role %}
-                    {{ u.profile.role }}
-                {% else %}
-                    <span class="muted">—</span>
-                {% endif %}
-            </td>
-            <td>
-                {% with deps=u.profile.departments.all %}
-                    {% if deps %}
-                        {{ deps|join:", " }}
-                    {% else %}
-                        <span class="muted">—</span>
-                    {% endif %}
-                {% endwith %}
-            </td>
-            <td>
-                {% if u.profile.is_blocked %}
-                    <span class="badge badge-red">заблокирован</span>
-                {% elif u.is_active %}
-                    <span class="badge badge-blue">активен</span>
-                {% else %}
-                    <span class="badge badge-gray">неактивен</span>
-                {% endif %}
-            </td>
-            <td><a href="{% url 'user-edit' u.pk %}">Изменить</a></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6">Пользователи не найдены</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
 {% endblock %}

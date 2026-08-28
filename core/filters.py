@@ -1,43 +1,44 @@
 import django_filters
 from django import forms
 from django.db.models import Q
+from django.utils.translation import gettext_lazy as _
 
 from .models import Student, StudentAcademic
 
 
-BOOLEAN_CHOICES = (("", "Все"), ("true", "Да"), ("false", "Нет"))
+BOOLEAN_CHOICES = (("", _("Все")), ("true", _("Да")), ("false", _("Нет")))
 
 
 class StudentFilter(django_filters.FilterSet):
     search = django_filters.CharFilter(
         method="filter_search",
-        label="Поиск",
-        widget=forms.TextInput(attrs={"placeholder": "ФИО, ИИН или телефон"}),
+        label=_("Поиск"),
+        widget=forms.TextInput(attrs={"placeholder": _("ФИО, ИИН или телефон")}),
     )
     has_disability = django_filters.BooleanFilter(
         field_name="medical__has_disability",
-        label="Инвалидность",
+        label=_("Инвалидность"),
         widget=forms.Select(choices=BOOLEAN_CHOICES),
     )
     has_benefits = django_filters.BooleanFilter(
         method="filter_benefits",
-        label="Есть льготы",
+        label=_("Есть льготы"),
         widget=forms.Select(choices=BOOLEAN_CHOICES),
     )
     attendance = django_filters.ChoiceFilter(
         field_name="academic__attendance",
-        label="Посещаемость",
-        choices=[("", "Все")] + StudentAcademic.ATTENDANCE_CHOICES,
+        label=_("Посещаемость"),
+        choices=[("", _("Все"))] + StudentAcademic.ATTENDANCE_CHOICES,
     )
     has_unexcused_absences = django_filters.BooleanFilter(
         field_name="academic__has_unexcused_absences",
-        label="Пропуски без уважительной причины",
+        label=_("Пропуски без уважительной причины"),
         widget=forms.Select(choices=BOOLEAN_CHOICES),
     )
     activity = django_filters.CharFilter(
         method="filter_activity",
-        label="Внеучебная активность",
-        widget=forms.TextInput(attrs={"placeholder": "Ключевые слова"}),
+        label=_("Внеучебная активность"),
+        widget=forms.TextInput(attrs={"placeholder": _("Ключевые слова")}),
     )
 
     class Meta:
@@ -58,7 +59,7 @@ class StudentFilter(django_filters.FilterSet):
         super().__init__(*args, **kwargs)
         for field in self.filters.values():
             if hasattr(field.field, "empty_label"):
-                field.field.empty_label = "Все"
+                field.field.empty_label = _("Все")
 
     def filter_search(self, queryset, name, value):
         return queryset.filter(

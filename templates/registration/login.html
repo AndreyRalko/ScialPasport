@@ -1,10 +1,23 @@
-{% load static %}
+{% load i18n static %}
+{% get_current_language as LANGUAGE_CODE %}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход — Социальный паспорт</title>
+    <title>{% trans "Вход — Социальный паспорт" %}</title>
+    {% include "includes/brand_favicons.html" %}
+    <script>
+    (function () {
+        try {
+            var stored = localStorage.getItem("sp-theme");
+            var theme = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+            document.documentElement.setAttribute("data-theme", "light");
+        }
+    })();
+    </script>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body class="login-page">
@@ -12,18 +25,14 @@
     <section class="login-hero">
         <div class="login-hero-content">
             <div class="login-logo">
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-                    <rect width="40" height="40" rx="10" fill="rgba(255,255,255,0.12)"/>
-                    <path d="M12 28V16l8-4 8 4v12l-8 4-8-4z" stroke="#fff" stroke-width="1.5" fill="none"/>
-                    <path d="M20 12v16M12 16l8 4 8-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
+                {% include "includes/brand_wordmark.html" with surface="dark" size_class="brand-wordmark-hero" %}
             </div>
-            <h1>Социальный паспорт<br>студентов</h1>
-            <p class="login-tagline">Единая система учёта социального статуса, сопровождения и аналитики студентов университета</p>
+            <h1>{% trans "Социальный паспорт" %}<br>{% trans "студентов" %}</h1>
+            <p class="login-tagline">{% trans "Единая система учёта социального статуса, сопровождения и аналитики студентов университета" %}</p>
             <ul class="login-features">
-                <li>Карточки студентов и социальные данные</li>
-                <li>ИИ-аналитика и зона внимания</li>
-                <li>Отчёты и экспорт</li>
+                <li>{% trans "Карточки студентов и социальные данные" %}</li>
+                <li>{% trans "ИИ-аналитика и зона внимания" %}</li>
+                <li>{% trans "Отчёты и экспорт" %}</li>
             </ul>
         </div>
         <div class="login-hero-glow" aria-hidden="true"></div>
@@ -32,8 +41,28 @@
     <section class="login-panel">
         <div class="login-card">
             <div class="login-card-header">
-                <h2>Добро пожаловать</h2>
-                <p>Войдите в систему, чтобы продолжить работу</p>
+                <div class="login-toolbar">
+                    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="{% trans 'Переключить тему' %}" title="{% trans 'Переключить тему' %}">
+                        <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.2 3.2l1 1M11.8 11.8l1 1M12.8 3.2l-1 1M4.2 11.8l-1 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                            <path d="M13 10.2A5.5 5.5 0 1 1 5.8 3 4.4 4.4 0 0 0 13 10.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <form action="{% url 'set_language' %}" method="post" class="lang-switcher login-lang">
+                        {% csrf_token %}
+                        <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                        <button type="submit" name="language" value="kk" class="{% if LANGUAGE_CODE == 'kk' %}active{% endif %}">ҚАЗ</button>
+                        <button type="submit" name="language" value="ru" class="{% if LANGUAGE_CODE == 'ru' %}active{% endif %}">РУС</button>
+                    </form>
+                </div>
+                <div class="login-card-brand">
+                    {% include "includes/brand_wordmark.html" with size_class="brand-wordmark-card" %}
+                </div>
+                <h2>{% trans "Добро пожаловать" %}</h2>
+                <p>{% trans "Войдите в систему, чтобы продолжить работу" %}</p>
             </div>
 
             {% if form.errors %}
@@ -42,7 +71,7 @@
                     <circle cx="9" cy="9" r="8" stroke="currentColor" stroke-width="1.5"/>
                     <path d="M9 5.5v4M9 12h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                 </svg>
-                <span>Неверное имя пользователя или пароль. Попробуйте ещё раз.</span>
+                <span>{% trans "Неверное имя пользователя или пароль. Попробуйте ещё раз." %}</span>
             </div>
             {% endif %}
 
@@ -53,7 +82,7 @@
                 {% endif %}
 
                 <div class="login-field">
-                    <label for="id_username">Имя пользователя</label>
+                    <label for="id_username">{% trans "Имя пользователя" %}</label>
                     <div class="login-input-wrap">
                         <svg class="login-input-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                             <circle cx="9" cy="5.5" r="3" stroke="currentColor" stroke-width="1.4"/>
@@ -63,7 +92,7 @@
                             type="text"
                             name="username"
                             id="id_username"
-                            placeholder="Введите логин"
+                            placeholder="{% trans 'Введите логин' %}"
                             autofocus
                             autocomplete="username"
                             required
@@ -73,7 +102,7 @@
                 </div>
 
                 <div class="login-field">
-                    <label for="id_password">Пароль</label>
+                    <label for="id_password">{% trans "Пароль" %}</label>
                     <div class="login-input-wrap">
                         <svg class="login-input-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                             <rect x="3.5" y="8" width="11" height="7.5" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
@@ -83,7 +112,7 @@
                             type="password"
                             name="password"
                             id="id_password"
-                            placeholder="Введите пароль"
+                            placeholder="{% trans 'Введите пароль' %}"
                             autocomplete="current-password"
                             required
                         >
@@ -91,16 +120,31 @@
                 </div>
 
                 <button type="submit" class="login-submit">
-                    <span>Войти в систему</span>
+                    <span>{% trans "Войти в систему" %}</span>
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                         <path d="M3 9h10M10 5.5L13.5 9 10 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
             </form>
 
-            <p class="login-footer">Доступ предоставляется администратором системы</p>
+            <p class="login-footer">
+                {% trans "Доступ предоставляется администратором системы" %}<br>
+                <a href="{% url 'cabinet-login' %}">{% trans "Вход для студента" %}</a>
+            </p>
         </div>
     </section>
 </div>
+<script>
+(function () {
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+    if (!toggle) return;
+    toggle.addEventListener("click", function () {
+        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        try { localStorage.setItem("sp-theme", next); } catch (e) {}
+    });
+})();
+</script>
 </body>
 </html>

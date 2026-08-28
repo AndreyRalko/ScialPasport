@@ -1,25 +1,29 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
 {% if student %}
-<a class="back-link" href="{% url 'student-detail' student.pk %}">← Назад к профилю</a>
+<a class="back-link" href="{% url 'student-detail' student.pk %}">← {% trans "Назад к профилю" %}</a>
 {% else %}
-<a class="back-link" href="{% url 'student-list' %}">← Назад к списку</a>
+<a class="back-link" href="{% url 'student-list' %}">← {% trans "Назад к списку" %}</a>
 {% endif %}
 
 <div class="form-page-header">
     <h3>{{ title }}</h3>
-    {% if student %}<p class="muted">Редактирование данных {{ student.full_name }}</p>{% endif %}
+    {% if student %}<p class="muted">{% trans "Редактирование данных" %} {{ student.full_name }}</p>{% endif %}
 </div>
 
 <div class="card student-form-card">
-    <form method="post" class="student-form">
+    <form method="post" class="student-form" enctype="multipart/form-data">
         {% csrf_token %}
         {% if form.non_field_errors %}
             <div class="login-error" role="alert">{{ form.non_field_errors }}</div>
         {% endif %}
 
-        <div class="form-section">
-            <h4 class="form-section-title">Личные данные</h4>
+        <details class="form-section collapsible-form" open data-collapse="form-personal">
+            <summary class="collapse-head">
+                <h4 class="form-section-title">{% trans "Личные данные" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
             <div class="form-grid">
                 {% for field in personal_fields %}
                 <div class="form-field">
@@ -29,10 +33,13 @@
                 </div>
                 {% endfor %}
             </div>
-        </div>
+        </details>
 
-        <div class="form-section">
-            <h4 class="form-section-title">Учёба</h4>
+        <details class="form-section collapsible-form" open data-collapse="form-academic">
+            <summary class="collapse-head">
+                <h4 class="form-section-title">{% trans "Учёба" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
             <div class="form-grid">
                 {% for field in academic_fields %}
                 <div class="form-field">
@@ -42,14 +49,14 @@
                 </div>
                 {% endfor %}
             </div>
-        </div>
+        </details>
 
         <div class="form-actions">
-            <button type="submit" class="button">Сохранить</button>
+            <button type="submit" class="button">{% trans "Сохранить" %}</button>
             {% if student %}
-                <a class="button button-secondary" href="{% url 'student-detail' student.pk %}">Отмена</a>
+                <a class="button button-secondary" href="{% url 'student-detail' student.pk %}">{% trans "Отмена" %}</a>
             {% else %}
-                <a class="button button-secondary" href="{% url 'student-list' %}">Отмена</a>
+                <a class="button button-secondary" href="{% url 'student-list' %}">{% trans "Отмена" %}</a>
             {% endif %}
         </div>
     </form>

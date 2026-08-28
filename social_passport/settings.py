@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-t8uxdd5@yfmum*&r$pe)8l&rw&u5-e2nh-prw=1dg&sg()&a0r'
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "django-insecure-t8uxdd5@yfmum*&r$pe)8l&rw&u5-e2nh-prw=1dg&sg()&a0r",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
+    if host.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        "http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if origin.strip()
+]
 
 
 # Application definition
@@ -37,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
     'django_filters',
     'core',
 ]
@@ -44,9 +62,12 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.BlockedUserMiddleware',
+    'core.middleware.StudentCabinetMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -62,6 +83,8 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -75,12 +98,24 @@ WSGI_APPLICATION = 'social_passport.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.environ.get("POSTGRES_HOST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB", "social_passport"),
+            "USER": os.environ.get("POSTGRES_USER", "social_passport"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "social_passport"),
+            "HOST": os.environ.get("POSTGRES_HOST"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # Password validation
@@ -105,7 +140,14 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'ru-ru'
+LANGUAGE_CODE = 'kk'
+
+LANGUAGES = [
+    ('kk', 'Қазақша'),
+    ('ru', 'Русский'),
+]
+
+LOCALE_PATHS = [BASE_DIR / 'locale']
 
 TIME_ZONE = 'Asia/Almaty'
 
@@ -121,8 +163,36 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+MINIO_ENDPOINT_URL = os.environ.get("MINIO_ENDPOINT_URL", "")
+MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", MINIO_ENDPOINT_URL)
+MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "minioadmin")
+MINIO_BUCKET_NAME = os.environ.get("MINIO_BUCKET_NAME", "social-passport")
+MINIO_REGION = os.environ.get("MINIO_REGION", "us-east-1")
+USE_MINIO = bool(MINIO_ENDPOINT_URL)
+
+if USE_MINIO:
+    AWS_ACCESS_KEY_ID = MINIO_ACCESS_KEY
+    AWS_SECRET_ACCESS_KEY = MINIO_SECRET_KEY
+    AWS_STORAGE_BUCKET_NAME = MINIO_BUCKET_NAME
+    AWS_S3_ENDPOINT_URL = MINIO_ENDPOINT_URL
+    AWS_S3_REGION_NAME = MINIO_REGION
+    AWS_S3_ADDRESSING_STYLE = "path"
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_URL_PROTOCOL = "http:"
+    public_host = MINIO_PUBLIC_URL.replace("http://", "").replace("https://", "").rstrip("/")
+    AWS_S3_CUSTOM_DOMAIN = f"{public_host}/{MINIO_BUCKET_NAME}"
+    DEFAULT_FILE_STORAGE = "core.storage.MinioMediaStorage"
+    MEDIA_URL = f"{MINIO_PUBLIC_URL.rstrip('/')}/{MINIO_BUCKET_NAME}/media/"
+else:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'student-list'
+LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 
 # Default primary key field type

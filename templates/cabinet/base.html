@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+{% load i18n static %}
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "Кабинет студента" %}</title>
+    {% include "includes/brand_favicons.html" %}
+    <script>
+    (function () {
+        try {
+            var stored = localStorage.getItem("sp-theme");
+            var theme = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+            document.documentElement.setAttribute("data-theme", "light");
+        }
+    })();
+    </script>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+<div class="app-shell">
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'cabinet-home' %}">
+            {% include "includes/brand_wordmark.html" with surface="dark" size_class="brand-wordmark-sidebar" %}
+            <span class="brand-product">{% trans "Кабинет" %}<small>{% trans "студента" %}</small></span>
+        </a>
+        <nav class="menu">
+            <a class="{% if request.resolver_match.url_name == 'cabinet-home' %}active{% endif %}" href="{% url 'cabinet-home' %}">{% trans "Главная" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'cabinet-profile' %}active{% endif %}" href="{% url 'cabinet-profile' %}">{% trans "Мои данные" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'cabinet-family' %}active{% endif %}" href="{% url 'cabinet-family' %}">{% trans "Семья" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'cabinet-housing' %}active{% endif %}" href="{% url 'cabinet-housing' %}">{% trans "Жильё" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'cabinet-requests' %}active{% endif %}" href="{% url 'cabinet-requests' %}">{% trans "Обращения" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'cabinet-password' %}active{% endif %}" href="{% url 'cabinet-password' %}">{% trans "Пароль" %}</a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <header class="topbar">
+            <div class="topbar-title">
+                {% include "includes/brand_mark.html" %}
+                <h2>{% trans "Личный кабинет" %}</h2>
+            </div>
+            <div class="topbar-actions">
+                <button type="button" class="theme-toggle" id="theme-toggle" aria-label="{% trans 'Переключить тему' %}" title="{% trans 'Переключить тему' %}">
+                    <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.2 3.2l1 1M11.8 11.8l1 1M12.8 3.2l-1 1M4.2 11.8l-1 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M13 10.2A5.5 5.5 0 1 1 5.8 3 4.4 4.4 0 0 0 13 10.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <form action="{% url 'set_language' %}" method="post" class="lang-switcher">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <button type="submit" name="language" value="kk" class="{% if LANGUAGE_CODE == 'kk' %}active{% endif %}">ҚАЗ</button>
+                    <button type="submit" name="language" value="ru" class="{% if LANGUAGE_CODE == 'ru' %}active{% endif %}">РУС</button>
+                </form>
+                <a class="button" href="{% url 'cabinet-logout' %}">{% trans "Выход" %}</a>
+            </div>
+        </header>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</div>
+<script>
+(function () {
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+    if (toggle) {
+        toggle.addEventListener("click", function () {
+            const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+            root.setAttribute("data-theme", next);
+            try { localStorage.setItem("sp-theme", next); } catch (e) {}
+        });
+    }
+    document.querySelectorAll("details[data-collapse]").forEach(function (el) {
+        const key = "sp-collapse-" + el.dataset.collapse;
+        try {
+            const saved = localStorage.getItem(key);
+            if (saved === "0") el.removeAttribute("open");
+            if (saved === "1") el.setAttribute("open", "");
+        } catch (e) {}
+        el.addEventListener("toggle", function () {
+            try { localStorage.setItem(key, el.open ? "1" : "0"); } catch (e) {}
+        });
+    });
+})();
+</script>
+</body>
+</html>

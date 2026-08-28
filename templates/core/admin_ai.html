@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>{% trans "Админ-панель" %}</h3>
+        <div class="muted">{% trans "Провайдер, модель и API-ключ для анализа и ассистента" %}</div>
+    </div>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<div class="dash-kpis admin-kpis">
+    <div class="dash-kpi">
+        <span class="muted">{% trans "Провайдер" %}</span>
+        <strong>{{ ai_settings.get_provider_display }}</strong>
+    </div>
+    <div class="dash-kpi">
+        <span class="muted">{% trans "Модель" %}</span>
+        <strong class="ai-model-name">{{ ai_settings.model_label }}</strong>
+    </div>
+    <div class="dash-kpi">
+        <span class="muted">{% trans "API-ключ" %}</span>
+        <strong>{% if ai_settings.api_key %}{{ ai_settings.masked_key }}{% else %}—{% endif %}</strong>
+    </div>
+    <div class="dash-kpi {% if ai_settings.is_ready %}{% else %}dash-kpi-orange{% endif %}">
+        <span class="muted">{% trans "Статус" %}</span>
+        <strong>
+            {% if ai_settings.is_ready %}
+                {% trans "Подключено" %}
+            {% elif ai_settings.api_key %}
+                {% trans "Ключ есть, модель выключена" %}
+            {% else %}
+                {% trans "Не настроено" %}
+            {% endif %}
+        </strong>
+    </div>
+</div>
+
+<div class="card settings-user-form">
+    <form method="post" class="student-form" id="ai-settings-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="login-error" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <details class="form-section collapsible-form" open data-collapse="admin-ai">
+            <summary class="collapse-head">
+                <h4>{% trans "Подключение модели" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="collapse-body">
+                <p class="muted ai-help">
+                    {% trans "Ключ хранится на сервере и не показывается целиком. Он используется для ИИ-анализа карточки студента и ответов ассистента на главной. Медицинские сведения и ИИН во внешний API не отправляются." %}
+                </p>
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="{{ form.provider.id_for_label }}">{{ form.provider.label }}</label>
+                        {{ form.provider }}
+                        {% for error in form.provider.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+                    </div>
+                    <div class="form-field">
+                        <label for="{{ form.model.id_for_label }}">{{ form.model.label }}</label>
+                        {{ form.model }}
+                        {% for error in form.model.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+                    </div>
+                    <div class="form-field form-field-wide">
+                        <label for="{{ form.api_key.id_for_label }}">{{ form.api_key.label }}</label>
+                        {{ form.api_key }}
+                        {% if form.api_key.help_text %}<span class="field-hint">{{ form.api_key.help_text }}</span>{% endif %}
+                        {% for error in form.api_key.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+                    </div>
+                </div>
+                <label class="ai-enabled" for="{{ form.is_enabled.id_for_label }}">
+                    {{ form.is_enabled }}
+                    <span>{{ form.is_enabled.label }}</span>
+                </label>
+                {% for error in form.is_enabled.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+            </div>
+        </details>
+        <div class="form-actions">
+            <button type="submit" class="button" name="action" value="save">{% trans "Сохранить" %}</button>
+            <button type="submit" class="button button-secondary" name="action" value="test">{% trans "Проверить подключение" %}</button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const models = {
+        openai: [
+            ["gpt-4o-mini", "OpenAI — GPT-4o mini"],
+            ["gpt-4o", "OpenAI — GPT-4o"],
+            ["gpt-4.1-mini", "OpenAI — GPT-4.1 mini"],
+            ["gpt-4.1", "OpenAI — GPT-4.1"]
+        ],
+        claude: [
+            ["claude-sonnet-4-20250514", "Claude — Sonnet 4"],
+            ["claude-3-7-sonnet-latest", "Claude — 3.7 Sonnet"],
+            ["claude-3-5-haiku-latest", "Claude — 3.5 Haiku"],
+            ["claude-opus-4-20250514", "Claude — Opus 4"]
+        ]
+    };
+    const defaults = { openai: "gpt-4o-mini", claude: "claude-sonnet-4-20250514" };
+    const provider = document.getElementById("id_provider");
+    const model = document.getElementById("id_model");
+    if (!provider || !model) return;
+
+    function fillModels() {
+        const current = model.value;
+        const list = models[provider.value] || [];
+        model.innerHTML = "";
+        list.forEach(function (item) {
+            const option = document.createElement("option");
+            option.value = item[0];
+            option.textContent = item[1];
+            model.appendChild(option);
+        });
+        const values = list.map(function (item) { return item[0]; });
+        model.value = values.indexOf(current) >= 0 ? current : (defaults[provider.value] || values[0]);
+    }
+
+    provider.addEventListener("change", fillModels);
+    fillModels();
+})();
+</script>
+{% endblock %}

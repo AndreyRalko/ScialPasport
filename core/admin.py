@@ -21,6 +21,7 @@ from .models import (
     StudentHousing,
     StudentMedical,
     StudentPsychoProfile,
+    StudentRequest,
     StudyGroup,
     TemperamentType,
     UserProfile,
@@ -53,6 +54,7 @@ admin.site.register(
         StudentMedical,
         StudentBenefits,
         StudentAIAnalysis,
+        StudentRequest,
         ActionLog,
     ]
 )

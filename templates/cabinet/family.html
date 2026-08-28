@@ -1,0 +1,77 @@
+{% extends "cabinet/base.html" %}
+{% load i18n %}
+{% block content %}
+<h3>{% trans "Семья" %}</h3>
+<div class="muted">{% trans "Укажите тип семьи и близких, с кем можно связаться." %}</div>
+
+<details class="card collapsible" open data-collapse="cab-family" style="margin-top:12px">
+    <summary class="collapse-head">
+        <h4>{% trans "Сведения о семье" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <form method="post" class="student-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="save_family">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="id_family_type">{{ form.family_type.label }}</label>
+                    {{ form.family_type }}
+                </div>
+                <div class="form-field">
+                    <label for="id_income_level">{{ form.income_level.label }}</label>
+                    {{ form.income_level }}
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit">{% trans "Сохранить" %}</button>
+            </div>
+        </form>
+    </div>
+</details>
+
+<details class="card collapsible" open data-collapse="cab-members">
+    <summary class="collapse-head">
+        <h4>{% trans "Члены семьи" %}</h4>
+        <span class="muted">{{ members|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        {% for member in members %}
+        <div class="member-card">
+            <div>
+                <div class="member-name">{{ member.full_name }}</div>
+                <div class="member-meta">{{ member.get_relation_display }}{% if member.birth_year %} · {{ member.birth_year }}{% endif %}</div>
+                {% if member.phone %}<div class="member-detail">{{ member.phone }}</div>{% endif %}
+            </div>
+            <form method="post" action="{% url 'cabinet-family-member-delete' member.pk %}" class="inline-form">
+                {% csrf_token %}
+                <button type="submit" class="link-button">{% trans "Удалить" %}</button>
+            </form>
+        </div>
+        {% empty %}
+        <div class="muted">{% trans "Члены семьи не добавлены" %}</div>
+        {% endfor %}
+
+        <h4 style="margin-top:16px">{% trans "Добавить" %}</h4>
+        <form method="post" action="{% url 'cabinet-family-member-add' %}" class="student-form">
+            {% csrf_token %}
+            <div class="form-grid">
+                {% for field in member_form %}
+                <div class="form-field {% if field.field.widget.input_type == 'checkbox' %}form-field-check{% endif %}">
+                    {% if field.field.widget.input_type == "checkbox" %}
+                        <label class="settings-checkbox">{{ field }} <span>{{ field.label }}</span></label>
+                    {% else %}
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="form-actions">
+                <button type="submit">{% trans "Добавить" %}</button>
+            </div>
+        </form>
+    </div>
+</details>
+{% endblock %}

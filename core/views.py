@@ -3,9 +3,14 @@ import csv
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from django.contrib.auth.models import User
+from django.contrib.auth.views import LoginView
+from django.urls import reverse
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _lazy
 from openpyxl import Workbook
 
 from .filters import StudentFilter
@@ -42,6 +47,8 @@ from .models import (
     UserProfile,
     UserRole,
 )
+from .dashboard import get_dashboard_stats
+from .rag import answer_question
 from .services import (
     build_ai_analysis,
     get_card_completion_export_rows,
@@ -51,42 +58,42 @@ from .services import (
 
 REFERENCE_GROUPS = [
     {
-        "title": "Учебные",
+        "title": _lazy("Учебные"),
         "items": [
-            {"key": "departments", "title": "Кафедры", "model": Department},
-            {"key": "specialties", "title": "Специальности", "model": Specialty},
-            {"key": "groups", "title": "Учебные группы", "model": StudyGroup},
-            {"key": "payment_forms", "title": "Формы оплаты", "model": PaymentForm},
+            {"key": "departments", "title": _lazy("Кафедры"), "model": Department},
+            {"key": "specialties", "title": _lazy("Специальности"), "model": Specialty},
+            {"key": "groups", "title": _lazy("Учебные группы"), "model": StudyGroup},
+            {"key": "payment_forms", "title": _lazy("Формы оплаты"), "model": PaymentForm},
         ],
     },
     {
-        "title": "Семья и жильё",
+        "title": _lazy("Семья и жильё"),
         "items": [
-            {"key": "family_types", "title": "Типы семьи", "model": FamilyType},
-            {"key": "income_levels", "title": "Материальное положение", "model": FamilyIncomeLevel},
-            {"key": "housing_types", "title": "Типы жилья", "model": HousingType},
+            {"key": "family_types", "title": _lazy("Типы семьи"), "model": FamilyType},
+            {"key": "income_levels", "title": _lazy("Материальное положение"), "model": FamilyIncomeLevel},
+            {"key": "housing_types", "title": _lazy("Типы жилья"), "model": HousingType},
         ],
     },
     {
-        "title": "Социально-психологические",
+        "title": _lazy("Социально-психологические"),
         "items": [
-            {"key": "temperaments", "title": "Темперамент", "model": TemperamentType},
-            {"key": "communication", "title": "Уровень общения", "model": CommunicationLevel},
-            {"key": "group_behavior", "title": "Поведение в группе", "model": GroupBehaviorType},
-            {"key": "responsibility", "title": "Ответственность", "model": ResponsibilityLevel},
-            {"key": "adaptation", "title": "Адаптация", "model": AdaptationLevel},
+            {"key": "temperaments", "title": _lazy("Темперамент"), "model": TemperamentType},
+            {"key": "communication", "title": _lazy("Уровень общения"), "model": CommunicationLevel},
+            {"key": "group_behavior", "title": _lazy("Поведение в группе"), "model": GroupBehaviorType},
+            {"key": "responsibility", "title": _lazy("Ответственность"), "model": ResponsibilityLevel},
+            {"key": "adaptation", "title": _lazy("Адаптация"), "model": AdaptationLevel},
         ],
     },
     {
-        "title": "Медицинские",
+        "title": _lazy("Медицинские"),
         "items": [
-            {"key": "health_groups", "title": "Группы здоровья", "model": HealthGroup},
+            {"key": "health_groups", "title": _lazy("Группы здоровья"), "model": HealthGroup},
         ],
     },
     {
-        "title": "Системные",
+        "title": _lazy("Системные"),
         "items": [
-            {"key": "user_roles", "title": "Роли пользователей", "model": UserRole},
+            {"key": "user_roles", "title": _lazy("Роли пользователей"), "model": UserRole},
         ],
     },
 ]
@@ -113,7 +120,7 @@ def log_action(request, action, description):
 
 STUDENT_PERSONAL_FIELDS = [
     "last_name", "first_name", "middle_name", "birth_date",
-    "citizenship", "nationality", "iin", "phone",
+    "citizenship", "nationality", "iin", "phone", "photo",
 ]
 STUDENT_ACADEMIC_FIELDS = ["department", "specialty", "course", "group", "payment_form"]
 
@@ -137,18 +144,51 @@ def _block_form_context(form, title, student, tab=None):
         "title": title,
         "subtitle": student.full_name,
         "back_url": back_url,
-        "back_label": "Назад к профилю",
+        "back_label": _("Назад к профилю"),
     }
+
+
+class StaffLoginView(LoginView):
+    template_name = "registration/login.html"
+
+    def get_success_url(self):
+        from .cabinet import is_student_user
+
+        if is_student_user(self.request.user):
+            return reverse("cabinet-home")
+        return super().get_success_url()
+
+
+@login_required
+def home(request):
+    from .cabinet import is_student_user
+
+    if is_student_user(request.user):
+        return redirect("cabinet-home")
+    return render(request, "core/home.html", get_dashboard_stats())
+
+
+@login_required
+@require_POST
+def assistant_ask(request):
+    message = (request.POST.get("message") or "").strip()
+    result = answer_question(message)
+    log_action(request, "view_sensitive", _("Вопрос ИИ-ассистенту: %(q)s") % {"q": message[:180]})
+    return JsonResponse(result)
 
 
 @login_required
 def student_list(request):
     qs = Student.objects.select_related(
-        "department", "group", "specialty", "payment_form"
+        "department", "group", "specialty", "payment_form", "academic"
     ).prefetch_related("ai_analyses")
     student_filter = StudentFilter(request.GET, queryset=qs)
     high_risk = Student.objects.filter(ai_analyses__risk_level="high").distinct().count()
-    low_adaptation = Student.objects.filter(psycho__adaptation_level__name__icontains="низ").distinct().count()
+    low_adaptation = Student.objects.filter(
+        Q(psycho__adaptation_level__code="adaptationlevel_low")
+        | Q(psycho__adaptation_level__name__icontains="төмен")
+        | Q(psycho__adaptation_level__name_ru__icontains="низ")
+    ).distinct().count()
     problem_attendance = Student.objects.filter(academic__attendance="problematic").distinct().count()
     return render(
         request,
@@ -165,31 +205,31 @@ def student_list(request):
 
 @login_required
 def student_create(request):
-    form = StudentForm(request.POST or None)
+    form = StudentForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
         student = form.save()
         StudentFamily.objects.get_or_create(student=student)
-        log_action(request, "create", f"Создан студент: {student.full_name}")
+        log_action(request, "create", _("Создан студент: %(name)s") % {"name": student.full_name})
         return redirect("student-detail", pk=student.pk)
     return render(
         request,
         "core/student_form.html",
-        _student_form_context(form, "Добавить студента"),
+        _student_form_context(form, _("Добавить студента")),
     )
 
 
 @login_required
 def student_update(request, pk):
     student = get_object_or_404(Student, pk=pk)
-    form = StudentForm(request.POST or None, instance=student)
+    form = StudentForm(request.POST or None, request.FILES or None, instance=student)
     if request.method == "POST" and form.is_valid():
         form.save()
-        log_action(request, "update", f"Обновлен студент: {student.full_name}")
+        log_action(request, "update", _("Обновлен студент: %(name)s") % {"name": student.full_name})
         return redirect("student-detail", pk=student.pk)
     return render(
         request,
         "core/student_form.html",
-        _student_form_context(form, "Редактировать студента", student),
+        _student_form_context(form, _("Редактировать студента"), student),
     )
 
 
@@ -208,6 +248,7 @@ def student_detail(request, pk):
         "benefits": getattr(student, "benefits", None),
         "latest_ai": student.ai_analyses.first(),
         "ai_history": student.ai_analyses.all()[:10],
+        "cabinet_requests": student.cabinet_requests.all()[:10],
     }
     return render(request, "core/student_detail.html", context)
 
@@ -224,7 +265,7 @@ def family_edit(request, pk):
     return render(
         request,
         "core/form.html",
-        _block_form_context(form, "Сведения о семье", student, "family"),
+        _block_form_context(form, _("Сведения о семье"), student, "family"),
     )
 
 
@@ -242,7 +283,7 @@ def family_member_create(request, pk):
     return render(
         request,
         "core/form.html",
-        _block_form_context(form, "Добавить члена семьи", student, "family"),
+        _block_form_context(form, _("Добавить члена семьи"), student, "family"),
     )
 
 
@@ -274,39 +315,39 @@ def _edit_student_block(request, pk, rel_name, form_class, title, tab):
 
 @login_required
 def housing_edit(request, pk):
-    return _edit_student_block(request, pk, "housing", StudentHousingForm, "Жилищные условия", "housing")
+    return _edit_student_block(request, pk, "housing", StudentHousingForm, _("Жилищные условия"), "housing")
 
 
 @login_required
 def psycho_edit(request, pk):
     return _edit_student_block(
         request, pk, "psycho", StudentPsychoProfileForm,
-        "Социально-психологический профиль", "psycho",
+        _("Социально-психологический профиль"), "psycho",
     )
 
 
 @login_required
 def academic_edit(request, pk):
-    return _edit_student_block(request, pk, "academic", StudentAcademicForm, "Учебная деятельность", "academic")
+    return _edit_student_block(request, pk, "academic", StudentAcademicForm, _("Учебная деятельность"), "academic")
 
 
 @login_required
 @permission_required("core.view_studentmedical", raise_exception=True)
 def medical_edit(request, pk):
     log_action(request, "view_sensitive", "Доступ к медицинским данным")
-    return _edit_student_block(request, pk, "medical", StudentMedicalForm, "Медицинские сведения", "medical")
+    return _edit_student_block(request, pk, "medical", StudentMedicalForm, _("Медицинские сведения"), "medical")
 
 
 @login_required
 def benefits_edit(request, pk):
-    return _edit_student_block(request, pk, "benefits", StudentBenefitsForm, "Льготы и поддержка", "benefits")
+    return _edit_student_block(request, pk, "benefits", StudentBenefitsForm, _("Льготы и поддержка"), "benefits")
 
 
 @login_required
 def ai_generate(request, pk):
     student = get_object_or_404(Student, pk=pk)
     build_ai_analysis(student)
-    messages.success(request, "ИИ-анализ сформирован.")
+    messages.success(request, _("ИИ-анализ сформирован."))
     log_action(request, "create", f"Сформирован ИИ-анализ: {student.full_name}")
     return redirect("student-detail", pk=pk)
 
@@ -320,7 +361,8 @@ def ai_analytics_page(request):
 
     spotlight = Student.objects.filter(
         Q(ai_analyses__risk_level="high")
-        | Q(psycho__adaptation_level__name__icontains="низ")
+        | Q(psycho__adaptation_level__code="adaptationlevel_low")
+        | Q(psycho__adaptation_level__name_ru__icontains="низ")
         | Q(academic__attendance="problematic")
     ).distinct()
     return render(request, "core/ai_analytics.html", {"analyses": qs[:100], "students": spotlight})
@@ -337,11 +379,20 @@ def reports_page(request):
 
 def _report_queryset(report_key):
     query_map = {
-        "low_income": Student.objects.filter(family__income_level__name__icontains="малообеспеч"),
+        "low_income": Student.objects.filter(
+            Q(family__income_level__code="familyincomelevel_low_income")
+            | Q(family__income_level__name_ru__icontains="малообеспеч")
+        ),
         "disability": Student.objects.filter(medical__has_disability=True),
-        "dormitory": Student.objects.filter(housing__housing_type__name__icontains="общежит"),
+        "dormitory": Student.objects.filter(
+            Q(housing__housing_type__code="housingtype_dormitory")
+            | Q(housing__housing_type__name_ru__icontains="общежит")
+        ),
         "problem_attendance": Student.objects.filter(academic__attendance="problematic"),
-        "low_adaptation": Student.objects.filter(psycho__adaptation_level__name__icontains="низ"),
+        "low_adaptation": Student.objects.filter(
+            Q(psycho__adaptation_level__code="adaptationlevel_low")
+            | Q(psycho__adaptation_level__name_ru__icontains="низ")
+        ),
         "high_risk_ai": Student.objects.filter(ai_analyses__risk_level="high"),
     }
     return query_map.get(report_key, Student.objects.none()).distinct()
@@ -353,7 +404,7 @@ def export_report(request, report_key, fmt):
         headers, rows = get_card_completion_export_rows()
         filename = "card_completion"
     else:
-        headers = ["ФИО", "ИИН", "Группа", "Курс", "Телефон"]
+        headers = [_("ФИО"), _("ИИН"), _("Группа"), _("Курс"), _("Телефон")]
         rows = [
             [s.full_name, s.iin, s.group.name, s.course, s.phone]
             for s in _report_queryset(report_key)
@@ -384,16 +435,16 @@ def export_report(request, report_key, fmt):
 
 
 @login_required
-@permission_required("core.view_actionlog", raise_exception=True)
 def action_logs(request):
-    logs = ActionLog.objects.select_related("user")[:200]
-    return render(request, "core/action_logs.html", {"logs": logs})
+    return redirect("admin-logs")
 
 
 @login_required
 @user_passes_test(_staff_required)
 def settings_page(request):
     tab = request.GET.get("tab", "references")
+    if tab == "users":
+        return redirect("admin-users")
     ref_key = request.GET.get("ref", "departments")
     ref_config = _get_reference_config(ref_key)
     if not ref_config:
@@ -410,21 +461,13 @@ def settings_page(request):
             if add_form.is_valid():
                 model.objects.create(
                     name=add_form.cleaned_data["name"],
+                    name_ru=add_form.cleaned_data.get("name_ru", ""),
                     is_active=add_form.cleaned_data.get("is_active", True),
                 )
                 log_action(request, "create", f"Добавлен справочник: {ref_config['title']} — {add_form.cleaned_data['name']}")
-                messages.success(request, "Запись справочника добавлена.")
+                messages.success(request, _("Запись справочника добавлена."))
                 return redirect(f"{request.path}?tab=references&ref={ref_key}")
 
-    users = []
-    if tab == "users":
-        for user in User.objects.all():
-            UserProfile.objects.get_or_create(user=user)
-        users = (
-            User.objects.select_related("profile", "profile__role")
-            .prefetch_related("profile__departments")
-            .order_by("username")
-        )
     return render(
         request,
         "core/settings.html",
@@ -435,7 +478,6 @@ def settings_page(request):
             "reference_groups": REFERENCE_GROUPS,
             "reference_items": reference_items,
             "add_form": add_form,
-            "users": users,
         },
     )
 
@@ -451,20 +493,21 @@ def reference_edit(request, key, pk):
     item = get_object_or_404(model, pk=pk)
     form = ReferenceItemForm(
         request.POST or None,
-        initial={"name": item.name, "is_active": item.is_active},
+        initial={"name": item.name, "name_ru": item.name_ru, "is_active": item.is_active},
     )
     if request.method == "POST" and form.is_valid():
         item.name = form.cleaned_data["name"]
+        item.name_ru = form.cleaned_data.get("name_ru", "")
         item.is_active = form.cleaned_data.get("is_active", False)
         item.save()
         log_action(request, "update", f"Обновлён справочник: {ref_config['title']} — {item.name}")
-        messages.success(request, "Запись справочника обновлена.")
+        messages.success(request, _("Запись справочника обновлена."))
         return redirect(f"/settings/?tab=references&ref={key}")
 
     return render(
         request,
         "core/form.html",
-        {"form": form, "title": f"Редактировать: {ref_config['title']}"},
+        {"form": form, "title": _("Редактировать: %(title)s") % {"title": ref_config["title"]}},
     )
 
 
@@ -481,38 +524,19 @@ def reference_toggle(request, key, pk):
     item = get_object_or_404(ref_config["model"], pk=pk)
     item.is_active = not item.is_active
     item.save(update_fields=["is_active", "updated_at"])
-    status = "активирована" if item.is_active else "деактивирована"
+    status = _("активирована") if item.is_active else _("деактивирована")
     log_action(request, "update", f"Запись справочника {status}: {item.name}")
-    messages.success(request, f"Запись {status}.")
+    messages.success(request, _("Запись %(status)s.") % {"status": status})
     return redirect(f"/settings/?tab=references&ref={key}")
 
 
 @login_required
 @user_passes_test(_staff_required)
 def user_create(request):
-    form = UserManageForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        user = form.save()
-        log_action(request, "create", f"Создан пользователь: {user.username}")
-        messages.success(request, "Пользователь создан.")
-        return redirect("/settings/?tab=users")
-
-    return render(request, "core/settings_user_form.html", {"form": form, "title": "Новый пользователь"})
+    return redirect("admin-user-create")
 
 
 @login_required
 @user_passes_test(_staff_required)
 def user_edit(request, pk):
-    user_obj = get_object_or_404(User, pk=pk)
-    form = UserManageForm(request.POST or None, instance=user_obj)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        log_action(request, "update", f"Обновлён пользователь: {user_obj.username}")
-        messages.success(request, "Пользователь обновлён.")
-        return redirect("/settings/?tab=users")
-
-    return render(
-        request,
-        "core/settings_user_form.html",
-        {"form": form, "title": f"Редактировать: {user_obj.username}"},
-    )
+    return redirect("admin-user-edit", pk=pk)

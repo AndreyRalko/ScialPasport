@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>{% trans "Админ-панель" %}</h3>
+        <div class="muted">{% trans "Все действия пользователей в системе" %}</div>
+    </div>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<details class="card collapsible" open data-collapse="admin-log-filters">
+    <summary class="collapse-head">
+        <h4>{% trans "Фильтры" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <form method="get" class="filter-form">
+            <div class="filter-grid">
+                <div class="filter-item">
+                    <label for="id_q">{% trans "Поиск" %}</label>
+                    <input id="id_q" type="search" name="q" value="{{ query }}" placeholder="{% trans 'Пользователь или описание' %}">
+                </div>
+                <div class="filter-item">
+                    <label for="id_action">{% trans "Действие" %}</label>
+                    <select id="id_action" name="action">
+                        <option value="">{% trans "Все" %}</option>
+                        {% for value, label in action_choices %}
+                            <option value="{{ value }}" {% if action == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit">{% trans "Применить" %}</button>
+                <a class="button button-secondary" href="{% url 'admin-logs' %}">{% trans "Сбросить" %}</a>
+            </div>
+        </form>
+    </div>
+</details>
+
+<details class="card collapsible" open data-collapse="admin-logs">
+    <summary class="collapse-head">
+        <h4>{% trans "История действий" %}</h4>
+        <span class="muted">{{ logs|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead>
+            <tr>
+                <th>{% trans "Дата" %}</th>
+                <th>{% trans "Пользователь" %}</th>
+                <th>{% trans "Действие" %}</th>
+                <th>{% trans "Описание" %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.created_at|date:"d.m.Y H:i" }}</td>
+                <td>
+                    {% if log.user %}
+                        <a href="{% url 'admin-user-edit' log.user.pk %}">{{ log.user }}</a>
+                    {% else %}
+                        {% trans "Система" %}
+                    {% endif %}
+                </td>
+                <td>{{ log.get_action_display }}</td>
+                <td>{{ log.description }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">{% trans "Нет данных" %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

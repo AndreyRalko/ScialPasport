@@ -1,72 +1,95 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
-<p><a href="{% url 'settings' %}?tab=users">← Назад к пользователям</a></p>
+<a class="back-link" href="{% if back_url %}{% url back_url %}{% else %}{% url 'admin-users' %}{% endif %}">← {% trans "Назад к пользователям" %}</a>
 <div class="topbar">
     <h3>{{ title }}</h3>
 </div>
+{% if admin_tabs %}{% include "core/admin_tabs.html" %}{% endif %}
 
 <div class="card settings-user-form">
     <form method="post">
         {% csrf_token %}
 
-        <div class="form-section">
-            <h4>Учётная запись</h4>
+        <details class="form-section collapsible-form" open data-collapse="user-account">
+            <summary class="collapse-head">
+                <h4>{% trans "Учётная запись" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
             <div class="form-grid">
                 <div class="form-field">
-                    <label for="id_username">Логин</label>
+                    <label for="id_username">{% trans "Логин" %}</label>
                     {{ form.username }}
                     {{ form.username.errors }}
                 </div>
                 <div class="form-field">
-                    <label for="id_password">Пароль</label>
+                    <label for="id_password">{% trans "Пароль" %}</label>
                     {{ form.password }}
                     {% if form.password.help_text %}<span class="field-hint">{{ form.password.help_text }}</span>{% endif %}
                     {{ form.password.errors }}
                 </div>
                 <div class="form-field">
-                    <label for="id_first_name">Имя</label>
+                    <label for="id_first_name">{% trans "Имя" %}</label>
                     {{ form.first_name }}
                 </div>
                 <div class="form-field">
-                    <label for="id_last_name">Фамилия</label>
+                    <label for="id_last_name">{% trans "Фамилия" %}</label>
                     {{ form.last_name }}
                 </div>
                 <div class="form-field form-field-wide">
-                    <label for="id_email">Электронная почта</label>
+                    <label for="id_email">{% trans "Электронная почта" %}</label>
                     {{ form.email }}
+                    {{ form.email.errors }}
                 </div>
             </div>
-        </div>
+        </details>
 
-        <div class="form-section">
-            <h4>Доступ и роль</h4>
+        <details class="form-section collapsible-form" open data-collapse="user-access">
+            <summary class="collapse-head">
+                <h4>{% trans "Доступ и роль" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
             <div class="form-grid">
                 <div class="form-field">
-                    <label for="id_role">Роль</label>
+                    <label for="id_role">{% trans "Роль" %}</label>
                     {{ form.role }}
                 </div>
                 <div class="form-field form-checks">
                     <label class="settings-checkbox">
-                        {{ form.is_staff }}
-                        <span>Права администратора</span>
+                        {{ form.is_active }}
+                        <span>{% trans "Активен" %}</span>
                     </label>
                     <label class="settings-checkbox">
-                        {{ form.is_blocked }}
-                        <span>Заблокировать пользователя</span>
+                        {{ form.is_staff }}
+                        <span>{% trans "Доступ к админ-панели" %}</span>
                     </label>
+                    {% if "is_superuser" in form.fields %}
+                    <label class="settings-checkbox">
+                        {{ form.is_superuser }}
+                        <span>{% trans "Суперпользователь" %}</span>
+                    </label>
+                    {% endif %}
+                    <label class="settings-checkbox">
+                        {{ form.is_blocked }}
+                        <span>{% trans "Заблокировать пользователя" %}</span>
+                    </label>
+                    {{ form.is_blocked.errors }}
+                    {{ form.is_staff.errors }}
+                    {{ form.is_active.errors }}
+                    {% if "is_superuser" in form.fields %}{{ form.is_superuser.errors }}{% endif %}
                 </div>
             </div>
             <div class="form-field">
-                <label>Кафедры</label>
+                <label>{% trans "Кафедры" %}</label>
                 <div class="checkbox-list">
                     {{ form.departments }}
                 </div>
             </div>
-        </div>
+        </details>
 
         <div class="form-actions">
-            <button type="submit">Сохранить</button>
-            <a class="button button-secondary" href="{% url 'settings' %}?tab=users">Отмена</a>
+            <button type="submit">{% trans "Сохранить" %}</button>
+            <a class="button button-secondary" href="{% url 'admin-users' %}">{% trans "Отмена" %}</a>
         </div>
     </form>
 </div>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<a class="back-link" href="{% url 'admin-groups' %}">← {% trans "К группам" %}</a>
+<div class="topbar">
+    <h3>{{ title }}</h3>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<div class="card settings-user-form">
+    <form method="post">
+        {% csrf_token %}
+        <details class="form-section collapsible-form" open data-collapse="group-main">
+            <summary class="collapse-head">
+                <h4>{% trans "Группа" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="form-field">
+                <label for="id_name">{{ form.name.label }}</label>
+                {{ form.name }}
+                {{ form.name.errors }}
+            </div>
+        </details>
+        <details class="form-section collapsible-form" open data-collapse="group-perms">
+            <summary class="collapse-head">
+                <h4>{% trans "Права" %}</h4>
+                <span class="collapse-chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="checkbox-list checkbox-list-wide">
+                {{ form.permissions }}
+            </div>
+            {{ form.permissions.errors }}
+        </details>
+        <div class="form-actions">
+            <button type="submit">{% trans "Сохранить" %}</button>
+            <a class="button button-secondary" href="{% url 'admin-groups' %}">{% trans "Отмена" %}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

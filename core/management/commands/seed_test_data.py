@@ -1,8 +1,22 @@
 import random
-from datetime import date
 
 from django.core.management.base import BaseCommand
 
+from core.cabinet import ensure_student_account
+from core.identity import (
+    ACTIVITIES,
+    CITIZENSHIP_ALIASES,
+    EXTRA_BENEFITS,
+    HOUSING_COMMENTS,
+    MEDICAL_CHRONIC,
+    MEDICAL_RECS,
+    NATIONALITY_ALIASES,
+    PSYCHO_NOTES,
+    build_iin,
+    generate_family_members,
+    generate_identity,
+    normalize_code,
+)
 from core.models import (
     AdaptationLevel,
     CommunicationLevel,
@@ -26,6 +40,7 @@ from core.models import (
     StudyGroup,
     TemperamentType,
 )
+from core.photos import save_student_photo
 from core.services import build_ai_analysis
 
 
@@ -34,57 +49,61 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--count", type=int, default=30, help="Количество студентов для генерации")
+        parser.add_argument("--force", action="store_true", help="Добавлять студентов, даже если они уже есть")
+        parser.add_argument("--replace", action="store_true", help="Удалить существующих студентов и создать заново")
+        parser.add_argument(
+            "--fix-identity",
+            action="store_true",
+            help="Исправить пол, отчество, язык ФИО и ИИН у существующих студентов",
+        )
+        parser.add_argument(
+            "--fix-mocks",
+            action="store_true",
+            help="Исправить язык полей, семью, возраста и фото у существующих студентов",
+        )
 
     def handle(self, *args, **options):
         count = options["count"]
+        if options.get("fix_mocks"):
+            self._fix_mocks()
+            return
+        if options.get("fix_identity"):
+            self._fix_identities()
+            return
+        if options.get("replace"):
+            Student.objects.all().delete()
+        elif Student.objects.exists() and not options.get("force"):
+            self.stdout.write("Студенты уже есть, генерация пропущена.")
+            return
 
-        departments = self._ensure_named(Department, ["Информатика и вычислительная техника", "Экономика и менеджмент", "Юриспруденция"])
-        specialties = self._ensure_named(Specialty, ["Программная инженерия", "Информационные системы", "Экономика", "Право"])
-        groups = self._ensure_named(StudyGroup, ["ПИ-21", "ПИ-31", "Ф-22", "ИС-11", "ПК-41"])
-        payment_forms = self._ensure_named(PaymentForm, ["грант", "платное отделение"])
-
-        family_types = self._ensure_named(FamilyType, ["полная", "неполная", "многодетная", "приемная", "семья в трудной жизненной ситуации"])
-        income_levels = self._ensure_named(FamilyIncomeLevel, ["благополучное", "среднее", "затруднительное", "малообеспеченная"])
-        housing_types = self._ensure_named(HousingType, ["проживает с родителями", "проживает отдельно", "общежитие", "съемное жилье"])
-        temperaments = self._ensure_named(TemperamentType, ["спокойный", "активный", "уравновешенный", "конфликтный"])
-        communications = self._ensure_named(CommunicationLevel, ["высокая", "средняя", "сниженная"])
-        behaviors = self._ensure_named(GroupBehaviorType, ["сотрудничает", "лидер", "пассивный", "изолированный"])
-        responsibilities = self._ensure_named(ResponsibilityLevel, ["высокий", "средний", "низкий"])
-        adaptations = self._ensure_named(AdaptationLevel, ["высокая", "средняя", "низкая"])
-        health_groups = self._ensure_named(HealthGroup, ["1", "2", "3", "спецгруппа"])
-
-        last_names = ["Иванов", "Петрова", "Сулейменов", "Ким", "Нурланов", "Смирнова", "Ахметов", "Серикова", "Морозов", "Тлеубекова"]
-        first_names = ["Алексей", "Мария", "Дамир", "Виктория", "Бекзат", "Анна", "Руслан", "Алина", "Егор", "Айгерим"]
-        middle_names = ["Петрович", "Сергеевна", "Ержанович", "Андреевна", "Нурланович", "Дмитриевна", "Олегович", "Маратовна", "Игоревич", "Кайратовна"]
-        activities = [
-            "волонтерский клуб, спорт",
-            "олимпиадный кружок, хакатоны",
-            "студсовет, дебатный клуб",
-            "секции по футболу",
-            "минимальная внеучебная активность",
-        ]
+        departments = list(Department.objects.all()) or self._ensure_named(
+            Department, ["Информатика және есептеу техникасы"]
+        )
+        specialties = list(Specialty.objects.all()) or self._ensure_named(Specialty, ["Бағдарламалық инженерия"])
+        groups = list(StudyGroup.objects.all()) or self._ensure_named(StudyGroup, ["ПИ-21"])
+        payment_forms = list(PaymentForm.objects.all()) or self._ensure_named(PaymentForm, ["грант"])
+        family_types = list(FamilyType.objects.all())
+        income_levels = list(FamilyIncomeLevel.objects.all())
+        housing_types = list(HousingType.objects.all())
+        temperaments = list(TemperamentType.objects.all())
+        communications = list(CommunicationLevel.objects.all())
+        behaviors = list(GroupBehaviorType.objects.all())
+        responsibilities = list(ResponsibilityLevel.objects.all())
+        adaptations = list(AdaptationLevel.objects.all())
+        health_groups = list(HealthGroup.objects.all())
 
         created = 0
         for i in range(count):
-            last_name = random.choice(last_names)
-            first_name = random.choice(first_names)
-            middle_name = random.choice(middle_names)
-
-            iin = self._generate_iin(i)
-            if Student.objects.filter(iin=iin).exists():
-                continue
-
-            birth_year = random.randint(2000, 2007)
-            birth_month = random.randint(1, 12)
-            birth_day = random.randint(1, 27)
+            identity = generate_identity(random, i)
+            iin = self._unique_iin(identity["iin"], identity["birth_date"], identity["female"])
 
             student = Student.objects.create(
-                last_name=last_name,
-                first_name=first_name,
-                middle_name=middle_name,
-                birth_date=date(birth_year, birth_month, birth_day),
-                citizenship="Казахстан",
-                nationality=random.choice(["казах", "русский", "уйгур", "татарин"]),
+                last_name=identity["last_name"],
+                first_name=identity["first_name"],
+                middle_name=identity["middle_name"],
+                birth_date=identity["birth_date"],
+                citizenship="kz",
+                nationality=identity["nationality"],
                 iin=iin,
                 phone=f"+7701{random.randint(1000000, 9999999)}",
                 department=random.choice(departments),
@@ -96,37 +115,27 @@ class Command(BaseCommand):
 
             family = StudentFamily.objects.create(
                 student=student,
-                family_type=random.choice(family_types),
-                income_level=random.choice(income_levels),
+                family_type=random.choice(family_types) if family_types else None,
+                income_level=random.choice(income_levels) if income_levels else None,
             )
 
-            for n in range(random.randint(1, 4)):
-                StudentFamilyMember.objects.create(
-                    family=family,
-                    full_name=f"{random.choice(last_names)} {random.choice(first_names)}",
-                    birth_year=random.randint(1960, 2018),
-                    relation=random.choice(["мать", "отец", "брат", "сестра", "опекун"]),
-                    workplace=random.choice(["Школа", "Больница", "Частная компания", "ИП", ""]),
-                    position=random.choice(["учитель", "врач", "менеджер", "инженер", ""]),
-                    phone=f"+7702{random.randint(1000000, 9999999)}",
-                    is_guardian=(n == 0 and random.choice([True, False])),
-                    is_primary_contact=(n == 0),
-                )
+            for member in generate_family_members(random, student, family.family_type):
+                StudentFamilyMember.objects.create(family=family, **member)
 
             StudentHousing.objects.create(
                 student=student,
-                housing_type=random.choice(housing_types),
-                comment=random.choice(["", "Проживает с родственниками в городе", "Регулярно меняет место проживания"]),
+                housing_type=random.choice(housing_types) if housing_types else None,
+                comment=random.choice(HOUSING_COMMENTS),
             )
 
             StudentPsychoProfile.objects.create(
                 student=student,
-                temperament=random.choice(temperaments),
-                communication=random.choice(communications),
-                behavior_in_group=random.choice(behaviors),
-                responsibility_level=random.choice(responsibilities),
-                adaptation_level=random.choice(adaptations),
-                description=random.choice(["Положительная динамика", "Требуется внимание к адаптации", "Стабильное поведение в группе"]),
+                temperament=random.choice(temperaments) if temperaments else None,
+                communication=random.choice(communications) if communications else None,
+                behavior_in_group=random.choice(behaviors) if behaviors else None,
+                responsibility_level=random.choice(responsibilities) if responsibilities else None,
+                adaptation_level=random.choice(adaptations) if adaptations else None,
+                description=random.choice(PSYCHO_NOTES),
             )
 
             attendance = random.choice(["good", "satisfactory", "problematic"])
@@ -137,31 +146,33 @@ class Command(BaseCommand):
                 attendance=attendance,
                 has_unexcused_absences=has_abs,
                 unexcused_absences_count=random.randint(0, 20) if has_abs else 0,
-                activity=random.choice(activities),
+                activity=random.choice(ACTIVITIES),
             )
 
             has_disability = random.choice([False, False, False, True])
             StudentMedical.objects.create(
                 student=student,
-                health_group=random.choice(health_groups),
+                health_group=random.choice(health_groups) if health_groups else None,
                 has_disability=has_disability,
                 disability_details="Ограничения по нагрузке" if has_disability else "",
-                chronic_diseases=random.choice(["", "нет", "аллергия"]),
-                recommendations=random.choice(["Плановое наблюдение", "Без специальных рекомендаций", "Рекомендована консультация специалиста"]),
+                chronic_diseases=random.choice(MEDICAL_CHRONIC),
+                recommendations=random.choice(MEDICAL_RECS),
             )
 
+            grant = bool(student.payment_form and student.payment_form.code == "paymentform_grant")
             StudentBenefits.objects.create(
                 student=student,
-                state_grant=(student.payment_form.name == "грант"),
+                state_grant=grant or student.payment_form.name == "грант",
                 receives_scholarship=random.choice([True, False]),
                 disability_allowance=has_disability and random.choice([True, False]),
                 breadwinner_loss_allowance=random.choice([False, False, True]),
                 preferential_housing=random.choice([False, False, True]),
                 free_meals=random.choice([False, True]),
-                additional_benefits=random.choice(["", "Единовременная поддержка", "Социальная помощь по заявлению"]),
+                additional_benefits=random.choice(EXTRA_BENEFITS),
             )
 
             build_ai_analysis(student)
+            save_student_photo(student)
             created += 1
 
         self.stdout.write(self.style.SUCCESS(f"Тестовые данные добавлены. Новых студентов: {created}"))
@@ -174,8 +185,95 @@ class Command(BaseCommand):
             result.append(obj)
         return result
 
+    def _fix_identities(self):
+        updated = 0
+        for index, student in enumerate(Student.objects.select_related("user").all(), start=1):
+            identity = generate_identity(random, index)
+            student.last_name = identity["last_name"]
+            student.first_name = identity["first_name"]
+            student.middle_name = identity["middle_name"]
+            student.birth_date = identity["birth_date"]
+            student.nationality = identity["nationality"]
+            student.citizenship = "kz"
+            student.iin = self._unique_iin(
+                identity["iin"],
+                identity["birth_date"],
+                identity["female"],
+                exclude_pk=student.pk,
+            )
+            student.save(
+                update_fields=[
+                    "last_name",
+                    "first_name",
+                    "middle_name",
+                    "birth_date",
+                    "nationality",
+                    "citizenship",
+                    "iin",
+                    "updated_at",
+                ]
+            )
+            ensure_student_account(student)
+            try:
+                save_student_photo(student, force=True)
+            except Exception as exc:
+                self.stderr.write(f"Фото не обновлено для {student.iin}: {exc}")
+            updated += 1
+            self.stdout.write(f"{student.iin}  {student.full_name}")
+        self.stdout.write(self.style.SUCCESS(f"Идентичность обновлена у {updated} студентов."))
+
+    def _fix_mocks(self):
+        updated = 0
+        for student in Student.objects.all():
+            student.citizenship = normalize_code(student.citizenship, CITIZENSHIP_ALIASES) or "kz"
+            student.nationality = normalize_code(student.nationality, NATIONALITY_ALIASES) or "kazakh"
+            student.save(update_fields=["citizenship", "nationality", "updated_at"])
+
+            family = StudentFamily.objects.filter(student=student).first()
+            if family:
+                family.members.all().delete()
+                for member in generate_family_members(random, student, family.family_type):
+                    StudentFamilyMember.objects.create(family=family, **member)
+
+            housing = StudentHousing.objects.filter(student=student).first()
+            if housing:
+                housing.comment = random.choice(HOUSING_COMMENTS)
+                housing.save(update_fields=["comment"])
+            psycho = StudentPsychoProfile.objects.filter(student=student).first()
+            if psycho:
+                psycho.description = random.choice(PSYCHO_NOTES)
+                psycho.save(update_fields=["description"])
+            academic = StudentAcademic.objects.filter(student=student).first()
+            if academic:
+                academic.activity = random.choice(ACTIVITIES)
+                academic.save(update_fields=["activity"])
+            medical = StudentMedical.objects.filter(student=student).first()
+            if medical:
+                medical.disability_details = "Ограничения по нагрузке" if medical.has_disability else ""
+                medical.chronic_diseases = random.choice(MEDICAL_CHRONIC)
+                medical.recommendations = random.choice(MEDICAL_RECS)
+                medical.save(update_fields=["disability_details", "chronic_diseases", "recommendations"])
+            benefits = StudentBenefits.objects.filter(student=student).first()
+            if benefits:
+                benefits.additional_benefits = random.choice(EXTRA_BENEFITS)
+                benefits.save(update_fields=["additional_benefits"])
+
+            try:
+                save_student_photo(student, force=True)
+            except Exception as exc:
+                self.stderr.write(f"Фото не обновлено для {student.iin}: {exc}")
+            updated += 1
+            self.stdout.write(f"{student.iin}  {student.full_name}")
+        self.stdout.write(self.style.SUCCESS(f"Мок-данные обновлены у {updated} студентов."))
+
     @staticmethod
-    def _generate_iin(seed):
-        base = 950101 + random.randint(100000, 999999)
-        suffix = (100000 + seed) % 1000000
-        return f"{base:06d}{suffix:06d}"[:12]
+    def _unique_iin(candidate, birth, female, exclude_pk=None):
+        serial = int(candidate[7:11]) if len(candidate) >= 11 else 1000
+        for step in range(10000):
+            iin = build_iin(birth, female, serial + step)
+            qs = Student.objects.filter(iin=iin)
+            if exclude_pk:
+                qs = qs.exclude(pk=exclude_pk)
+            if not qs.exists():
+                return iin
+        raise RuntimeError("Не удалось подобрать уникальный ИИН.")

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>{% trans "Админ-панель" %}</h3>
+        <div class="muted">{% trans "Пользователи, сессии, роли, права и настройки ИИ" %}</div>
+    </div>
+    <a class="button" href="{% url 'admin-user-create' %}">+ {% trans "Добавить пользователя" %}</a>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<div class="dash-kpis admin-kpis">
+    <a class="dash-kpi" href="{% url 'admin-users' %}">
+        <span class="muted">{% trans "Пользователи" %}</span>
+        <strong>{{ total_users }}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'admin-users' %}?status=active">
+        <span class="muted">{% trans "Активные" %}</span>
+        <strong>{{ active_users }}</strong>
+    </a>
+    <a class="dash-kpi dash-kpi-orange" href="{% url 'admin-users' %}?status=blocked">
+        <span class="muted">{% trans "Заблокированные" %}</span>
+        <strong>{{ blocked_users }}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'admin-users' %}?status=staff">
+        <span class="muted">{% trans "Администраторы" %}</span>
+        <strong>{{ staff_users }}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'admin-sessions' %}">
+        <span class="muted">{% trans "Активные сессии" %}</span>
+        <strong>{{ active_sessions }}</strong>
+    </a>
+    <a class="dash-kpi" href="{% url 'admin-roles' %}">
+        <span class="muted">{% trans "Роли / группы" %}</span>
+        <strong>{{ roles_count }}/{{ groups_count }}</strong>
+    </a>
+</div>
+
+<div class="dash-two">
+    <details class="card collapsible" open data-collapse="admin-roles-bar">
+        <summary class="collapse-head">
+            <h4>{% trans "Пользователи по ролям" %}</h4>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
+            {% for row in role_bars %}
+            <div class="chart-row">
+                <span>{{ row.role.localized_name }}</span>
+                <div class="chart-track"><div class="chart-fill" style="width:{{ row.pct }}%"></div></div>
+                <b>{{ row.count }}</b>
+            </div>
+            {% empty %}
+            <div class="muted">{% trans "Роли не заданы" %}</div>
+            {% endfor %}
+        </div>
+    </details>
+
+    <details class="card collapsible" open data-collapse="admin-logins">
+        <summary class="collapse-head">
+            <h4>{% trans "Последние входы" %}</h4>
+            <span class="collapse-chevron" aria-hidden="true"></span>
+        </summary>
+        <div class="collapse-body">
+            <table>
+                <thead><tr><th>{% trans "Пользователь" %}</th><th>{% trans "Роль" %}</th><th>{% trans "Вход" %}</th></tr></thead>
+                <tbody>
+                {% for u in recent_logins %}
+                <tr>
+                    <td><a href="{% url 'admin-user-edit' u.pk %}">{{ u.get_full_name|default:u.username }}</a></td>
+                    <td>{% if u.profile.role %}{{ u.profile.role }}{% else %}—{% endif %}</td>
+                    <td>{{ u.last_login|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3">{% trans "Нет данных" %}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+</div>
+
+<details class="card collapsible" open data-collapse="admin-recent">
+    <summary class="collapse-head">
+        <h4>{% trans "Последние действия" %}</h4>
+        <a href="{% url 'admin-logs' %}">{% trans "Журнал" %}</a>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead><tr><th>{% trans "Дата" %}</th><th>{% trans "Пользователь" %}</th><th>{% trans "Описание" %}</th></tr></thead>
+            <tbody>
+            {% for log in recent_admin_logs %}
+            <tr>
+                <td>{{ log.created_at|date:"d.m.Y H:i" }}</td>
+                <td>{% if log.user %}{{ log.user }}{% else %}{% trans "Система" %}{% endif %}</td>
+                <td>{{ log.description }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3">{% trans "Нет данных" %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

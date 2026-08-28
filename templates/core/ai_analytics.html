@@ -1,45 +1,63 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
-<h3>ИИ-аналитика</h3>
-<div class="muted">Мониторинг студентов с повышенными факторами риска</div>
-<div class="card">
-<form method="get">
-    <label>Уровень риска:</label>
-    <select name="risk_level">
-        <option value="">Все</option>
-        <option value="low">Низкий</option>
-        <option value="medium">Средний</option>
-        <option value="high">Высокий</option>
-    </select>
-    <button type="submit">Применить</button>
-</form>
-</div>
+<h3>{% trans "ИИ-аналитика" %}</h3>
+<div class="muted">{% trans "Мониторинг студентов с повышенными факторами риска" %}</div>
 
-<div class="card">
-<h4>Студенты в зоне внимания</h4>
-<ul>
-{% for s in students %}
-    <li><a href="{% url 'student-detail' s.pk %}">{{ s.full_name }}</a></li>
-{% empty %}
-    <li>Нет студентов по выбранным условиям.</li>
-{% endfor %}
-</ul>
-</div>
+<details class="card collapsible" open data-collapse="ai-filter" style="margin-top:12px">
+    <summary class="collapse-head">
+        <h4>{% trans "Фильтры" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <form method="get">
+            <label>{% trans "Уровень риска:" %}</label>
+            <select name="risk_level">
+                <option value="">{% trans "Все" %}</option>
+                <option value="low">{% trans "Низкий" %}</option>
+                <option value="medium">{% trans "Средний" %}</option>
+                <option value="high">{% trans "Высокий" %}</option>
+            </select>
+            <button type="submit">{% trans "Применить" %}</button>
+        </form>
+    </div>
+</details>
 
-<div class="card">
-<h4>Последние ИИ-анализы</h4>
-<table>
-    <thead><tr><th>Студент</th><th>Риск</th><th>Сопровождение</th><th>Дата</th></tr></thead>
-    <tbody>
-    {% for a in analyses %}
-    <tr>
-        <td><a href="{% url 'student-detail' a.student.pk %}">{{ a.student.full_name }}</a></td>
-        <td><span class="badge {% if a.risk_level == 'high' %}badge-red{% elif a.risk_level == 'medium' %}badge-orange{% else %}badge-blue{% endif %}">{{ a.get_risk_level_display }}</span></td>
-        <td><span class="badge badge-gray">{{ a.get_support_level_display }}</span></td>
-        <td>{{ a.created_at }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
-</div>
+<details class="card collapsible" open data-collapse="ai-attention">
+    <summary class="collapse-head">
+        <h4>{% trans "Студенты в зоне внимания" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <ul>
+        {% for s in students %}
+            <li><a href="{% url 'student-detail' s.pk %}">{{ s.full_name }}</a></li>
+        {% empty %}
+            <li>{% trans "Нет студентов по выбранным условиям." %}</li>
+        {% endfor %}
+        </ul>
+    </div>
+</details>
+
+<details class="card collapsible" open data-collapse="ai-analyses">
+    <summary class="collapse-head">
+        <h4>{% trans "Последние ИИ-анализы" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead><tr><th>{% trans "Студент" %}</th><th>{% trans "Риск" %}</th><th>{% trans "Сопровождение" %}</th><th>{% trans "Дата" %}</th></tr></thead>
+            <tbody>
+            {% for a in analyses %}
+            <tr>
+                <td><a href="{% url 'student-detail' a.student.pk %}">{{ a.student.full_name }}</a></td>
+                <td><span class="badge {% if a.risk_level == 'high' %}badge-red{% elif a.risk_level == 'medium' %}badge-orange{% else %}badge-blue{% endif %}">{{ a.get_risk_level_display }}</span></td>
+                <td><span class="badge badge-gray">{{ a.get_support_level_display }}</span></td>
+                <td>{{ a.created_at }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
 {% endblock %}

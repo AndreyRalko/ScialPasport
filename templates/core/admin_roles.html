@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block content %}
+<div class="topbar">
+    <div>
+        <h3>{% trans "Админ-панель" %}</h3>
+        <div class="muted">{% trans "Роли определяют доступ и группу прав пользователя" %}</div>
+    </div>
+</div>
+{% include "core/admin_tabs.html" %}
+
+<details class="card collapsible" open data-collapse="admin-role-add">
+    <summary class="collapse-head">
+        <h4>{% trans "Добавить роль" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <form method="post" class="settings-add-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_role">
+            <div class="settings-add-fields">
+                <div class="settings-field">
+                    <label for="id_name">{{ add_form.name.label }}</label>
+                    {{ add_form.name }}
+                </div>
+                <div class="settings-field">
+                    <label for="id_name_ru">{{ add_form.name_ru.label }}</label>
+                    {{ add_form.name_ru }}
+                </div>
+                <label class="settings-checkbox">
+                    {{ add_form.is_active }}
+                    <span>{% trans "Активна" %}</span>
+                </label>
+            </div>
+            <button type="submit">{% trans "Добавить" %}</button>
+        </form>
+    </div>
+</details>
+
+<details class="card collapsible" open data-collapse="admin-role-table">
+    <summary class="collapse-head">
+        <h4>{% trans "Роли" %}</h4>
+        <span class="muted">{{ roles|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <table>
+            <thead>
+            <tr>
+                <th>{% trans "Название (қаз)" %}</th>
+                <th>{% trans "Название (рус)" %}</th>
+                <th>{% trans "Код" %}</th>
+                <th>{% trans "Пользователи" %}</th>
+                <th>{% trans "Статус" %}</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for role in roles %}
+            <tr class="{% if not role.is_active %}row-inactive{% endif %}">
+                <td>{{ role.name }}</td>
+                <td>{% if role.name_ru %}{{ role.name_ru }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                <td class="muted">{{ role.code|default:"—" }}</td>
+                <td>{{ role.user_count }}</td>
+                <td>
+                    {% if role.is_active %}
+                        <span class="badge badge-blue">{% trans "активна" %}</span>
+                    {% else %}
+                        <span class="badge badge-gray">{% trans "неактивна" %}</span>
+                    {% endif %}
+                </td>
+                <td class="settings-actions">
+                    <a href="{% url 'admin-role-edit' role.pk %}">{% trans "Изменить" %}</a>
+                    <form method="post" action="{% url 'admin-role-toggle' role.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <button type="submit" class="link-button">
+                            {% if role.is_active %}{% trans "Деактивировать" %}{% else %}{% trans "Активировать" %}{% endif %}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">{% trans "Роли не заданы" %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</details>
+{% endblock %}

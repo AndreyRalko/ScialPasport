@@ -1,44 +1,72 @@
 {% extends "base.html" %}
+{% load i18n %}
 {% block content %}
 <div class="topbar">
     <div>
-        <h3>Студенты</h3>
-        <div class="muted">Социальные паспорта студентов университета</div>
+        <h3>{% trans "Студенты" %}</h3>
+        <div class="muted">{% trans "Социальные паспорта студентов университета" %}</div>
     </div>
 </div>
 
 <div class="stats-grid">
-    <div class="stat-card"><div class="muted">Высокий уровень риска</div><div class="stat-value">{{ high_risk_count }}</div></div>
-    <div class="stat-card"><div class="muted">Низкая адаптация</div><div class="stat-value">{{ low_adaptation_count }}</div></div>
-    <div class="stat-card"><div class="muted">Проблемная посещаемость</div><div class="stat-value">{{ problem_attendance_count }}</div></div>
+    <div class="stat-card"><div class="muted">{% trans "Высокий уровень риска" %}</div><div class="stat-value">{{ high_risk_count }}</div></div>
+    <div class="stat-card"><div class="muted">{% trans "Низкая адаптация" %}</div><div class="stat-value">{{ low_adaptation_count }}</div></div>
+    <div class="stat-card"><div class="muted">{% trans "Проблемная посещаемость" %}</div><div class="stat-value">{{ problem_attendance_count }}</div></div>
 </div>
 
-<div class="card">
-<form method="get" class="filter-form">
-    <div class="filter-grid">
-        {% for field in filter.form %}
-            <div class="filter-item">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
+<details class="card collapsible" open data-collapse="students-filters">
+    <summary class="collapse-head">
+        <h4>{% trans "Фильтры" %}</h4>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+        <form method="get" class="filter-form">
+            <div class="filter-grid">
+                {% for field in filter.form %}
+                    <div class="filter-item">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                {% endfor %}
             </div>
-        {% endfor %}
+            <div class="filter-actions">
+                <button type="submit">{% trans "Применить фильтр" %}</button>
+                <a class="button button-secondary" href="{% url 'student-list' %}">{% trans "Сбросить" %}</a>
+            </div>
+        </form>
     </div>
-    <div class="filter-actions">
-        <button type="submit">Применить фильтр</button>
-        <a class="button button-secondary" href="{% url 'student-list' %}">Сбросить</a>
-    </div>
-</form>
-</div>
+</details>
 
-<table class="card">
+<details class="card collapsible" open data-collapse="students-table">
+    <summary class="collapse-head">
+        <h4>{% trans "Список студентов" %}</h4>
+        <span class="muted">{{ students|length }}</span>
+        <span class="collapse-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="collapse-body">
+<table>
     <thead>
     <tr>
-        <th>ФИО</th><th>ИИН</th><th>Группа</th><th>Курс</th><th>Оплата</th><th>Статус</th><th></th>
+        <th></th>
+        <th>{% trans "ФИО" %}</th>
+        <th>{% trans "ИИН" %}</th>
+        <th>{% trans "Группа" %}</th>
+        <th>{% trans "Курс" %}</th>
+        <th>{% trans "Оплата" %}</th>
+        <th>{% trans "Статус" %}</th>
+        <th></th>
     </tr>
     </thead>
     <tbody>
     {% for student in students %}
     <tr>
+        <td>
+            {% if student.photo %}
+                <img class="table-avatar" src="{{ student.photo.url }}" alt="{{ student.full_name }}">
+            {% else %}
+                <div class="table-avatar table-avatar-fallback">{{ student.first_name|slice:":1" }}{{ student.last_name|slice:":1" }}</div>
+            {% endif %}
+        </td>
         <td>{{ student.full_name }}</td>
         <td>{{ student.iin }}</td>
         <td>{{ student.group }}</td>
@@ -46,16 +74,18 @@
         <td><span class="badge badge-blue">{{ student.payment_form }}</span></td>
         <td>
             {% if student.academic and student.academic.attendance == "problematic" %}
-                <span class="badge badge-red">проблемная</span>
+                <span class="badge badge-red">{% trans "проблемная" %}</span>
             {% else %}
-                <span class="badge badge-gray">стабильно</span>
+                <span class="badge badge-gray">{% trans "стабильно" %}</span>
             {% endif %}
         </td>
-        <td><a href="{% url 'student-detail' student.pk %}">Открыть</a></td>
+        <td><a href="{% url 'student-detail' student.pk %}">{% trans "Открыть" %}</a></td>
     </tr>
     {% empty %}
-    <tr><td colspan="7">Нет данных</td></tr>
+    <tr><td colspan="8">{% trans "Нет данных" %}</td></tr>
     {% endfor %}
     </tbody>
 </table>
+    </div>
+</details>
 {% endblock %}

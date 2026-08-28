@@ -1,0 +1,6 @@
+{% load i18n %}
+<div class="settings-tabs admin-tabs">
+    {% for tab in admin_tabs %}
+        <a class="settings-tab {% if section == tab.key %}active{% endif %}" href="{% url tab.url_name %}">{{ tab.title }}</a>
+    {% endfor %}
+</div>

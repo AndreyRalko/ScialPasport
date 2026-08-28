@@ -1,32 +1,71 @@
 <!DOCTYPE html>
-<html lang="ru">
+{% load i18n static %}
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Социальный паспорт</title>
-    {% load static %}
+    <title>{% trans "Социальный паспорт" %}</title>
+    {% include "includes/brand_favicons.html" %}
+    <script>
+    (function () {
+        try {
+            var stored = localStorage.getItem("sp-theme");
+            var theme = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+            document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+            document.documentElement.setAttribute("data-theme", "light");
+        }
+    })();
+    </script>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
 <body>
 <div class="app-shell">
     {% if user.is_authenticated %}
     <aside class="sidebar">
-        <div class="brand">Соц. паспорт<br><span>студента</span></div>
+        <a class="brand" href="{% url 'home' %}">
+            {% include "includes/brand_wordmark.html" with surface="dark" size_class="brand-wordmark-sidebar" %}
+            <span class="brand-product">{% trans "Соц. паспорт" %}<small>{% trans "студента" %}</small></span>
+        </a>
         <nav class="menu">
-            <a class="{% if request.resolver_match.url_name == 'student-list' %}active{% endif %}" href="{% url 'student-list' %}">Студенты</a>
-            <a class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}">Отчёты</a>
-            <a class="{% if request.resolver_match.url_name == 'ai-analytics' %}active{% endif %}" href="{% url 'ai-analytics' %}">ИИ-аналитика</a>
-            <a class="{% if request.resolver_match.url_name == 'action-logs' %}active{% endif %}" href="{% url 'action-logs' %}">Журнал действий</a>
-            <a class="{% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'user-create' or request.resolver_match.url_name == 'user-edit' or request.resolver_match.url_name == 'reference-edit' %}active{% endif %}" href="{% url 'settings' %}">Справочники / Пользователи</a>
+            <a class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">{% trans "Главная" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'student-list' %}active{% endif %}" href="{% url 'student-list' %}">{% trans "Студенты" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" href="{% url 'reports' %}">{% trans "Отчёты" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'ai-analytics' %}active{% endif %}" href="{% url 'ai-analytics' %}">{% trans "ИИ-аналитика" %}</a>
+            <a class="{% if request.resolver_match.url_name == 'settings' or request.resolver_match.url_name == 'reference-edit' %}active{% endif %}" href="{% url 'settings' %}">{% trans "Справочники" %}</a>
+            {% if user.is_staff %}
+            <a class="{% if request.resolver_match.url_name == 'admin-panel' or request.resolver_match.url_name == 'admin-users' or request.resolver_match.url_name == 'admin-user-create' or request.resolver_match.url_name == 'admin-user-edit' or request.resolver_match.url_name == 'admin-sessions' or request.resolver_match.url_name == 'admin-roles' or request.resolver_match.url_name == 'admin-role-edit' or request.resolver_match.url_name == 'admin-groups' or request.resolver_match.url_name == 'admin-group-create' or request.resolver_match.url_name == 'admin-group-edit' or request.resolver_match.url_name == 'admin-ai' or request.resolver_match.url_name == 'admin-logs' %}active{% endif %}" href="{% url 'admin-panel' %}">{% trans "Админ-панель" %}</a>
+            {% endif %}
         </nav>
     </aside>
     {% endif %}
     <main class="main-content">
         <header class="topbar">
-            <h2>Социальный паспорт студентов</h2>
-            {% if user.is_authenticated %}
-                <a class="button" href="{% url 'logout' %}">Выход</a>
-            {% endif %}
+            <div class="topbar-title">
+                {% include "includes/brand_mark.html" %}
+                <h2>{% trans "Социальный паспорт студентов" %}</h2>
+            </div>
+            <div class="topbar-actions">
+                <button type="button" class="theme-toggle" id="theme-toggle" aria-label="{% trans 'Переключить тему' %}" title="{% trans 'Переключить тему' %}">
+                    <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M8 1.5v1.4M8 13.1v1.4M1.5 8h1.4M13.1 8h1.4M3.2 3.2l1 1M11.8 11.8l1 1M12.8 3.2l-1 1M4.2 11.8l-1 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M13 10.2A5.5 5.5 0 1 1 5.8 3 4.4 4.4 0 0 0 13 10.2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <form action="{% url 'set_language' %}" method="post" class="lang-switcher">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <button type="submit" name="language" value="kk" class="{% if LANGUAGE_CODE == 'kk' %}active{% endif %}">ҚАЗ</button>
+                    <button type="submit" name="language" value="ru" class="{% if LANGUAGE_CODE == 'ru' %}active{% endif %}">РУС</button>
+                </form>
+                {% if user.is_authenticated %}
+                    <a class="button" href="{% url 'logout' %}">{% trans "Выход" %}</a>
+                {% endif %}
+            </div>
         </header>
         {% if messages %}
             {% for message in messages %}
@@ -36,5 +75,34 @@
         {% block content %}{% endblock %}
     </main>
 </div>
+<script>
+(function () {
+    const root = document.documentElement;
+    const toggle = document.getElementById("theme-toggle");
+    function setTheme(theme) {
+        root.setAttribute("data-theme", theme);
+        try { localStorage.setItem("sp-theme", theme); } catch (e) {}
+    }
+    if (toggle) {
+        toggle.addEventListener("click", function () {
+            setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+        });
+    }
+    document.querySelectorAll("details[data-collapse]").forEach(function (el) {
+        const key = "sp-collapse-" + el.dataset.collapse;
+        try {
+            const saved = localStorage.getItem(key);
+            if (saved === "0") el.removeAttribute("open");
+            if (saved === "1") el.setAttribute("open", "");
+        } catch (e) {}
+        el.addEventListener("toggle", function () {
+            try { localStorage.setItem(key, el.open ? "1" : "0"); } catch (e) {}
+        });
+    });
+    document.querySelectorAll(".collapse-head a, .collapse-head button, .collapse-head form").forEach(function (el) {
+        el.addEventListener("click", function (event) { event.stopPropagation(); });
+    });
+})();
+</script>
 </body>
 </html>
